@@ -121,210 +121,30 @@ const downloadCSV = (content: string, filename: string) => {
 };
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ----- CSS STYLE FOR THIS PAGE ----------------------------------------------------------------------------------------------------------------------------------------------------
-// opted for this than external, not familiar with tailwind din na used sa other files
-// constant 'S', will be used for the whole file and other atyling from index.ss
-const S = {
-  // layout ------------------------------------------------------------
-  page: {
-    width: "100%",
-    padding: "24px",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "24px",
-  },
-  topGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-    gap: "24px",
-  },
-  // cards -------------------------------------------------------------
-  card: {
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    padding: "24px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-  },
-  cardTitle: {
-    fontSize: "15px",
-    fontWeight: 600,
-    color: "#1e293b",
-    margin: 0,
-  },
-  cardSubtitle: {
-    fontSize: "13px",
-    color: "#64748b",
-    marginTop: "2px",
-    marginBottom: 0,
-  },
-  // form fields -------------------------------------------------------
-  fieldWrap: { marginTop: "16px" },
-  label: {
-    display: "block",
-    fontSize: "13px",
-    fontWeight: 500,
-    color: "#374151",
-    marginBottom: "4px",
-  },
-  input: {
-    width: "100%",
-    boxSizing: "border-box" as const,
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    background: "#f8fafc",
-    padding: "8px 12px",
-    fontSize: "13px",
-    color: "#1e293b",
-    outline: "none",
-  },
-  select: {
-    width: "100%",
-    boxSizing: "border-box" as const,
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    background: "#f8fafc",
-    padding: "8px 12px",
-    fontSize: "13px",
-    color: "#1e293b",
-    outline: "none",
-    appearance: "auto" as const,
-  },
-  row: { display: "flex", gap: "8px" },
-  spaceY: { display: "flex", flexDirection: "column" as const, gap: "16px" },
-  // dropdown ----------------------------------------------------------
-  dropdownBtn: {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    background: "#f8fafc",
-    padding: "8px 12px",
-    fontSize: "13px",
-    color: "#1e293b",
-    cursor: "pointer",
-  },
-  dropdownList: {
-    position: "absolute" as const,
-    top: "calc(100% + 4px)",
-    left: 0,
-    right: 0,
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    zIndex: 20,
-    overflow: "hidden",
-  },
-  dropdownItem: (active: boolean): React.CSSProperties => ({
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "8px 12px",
-    fontSize: "13px",
-    color: active ? "#3b5bdb" : "#374151",
-    fontWeight: active ? 600 : 400,
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    textAlign: "left",
-  }),
-  descText: {
-    fontSize: "13px",
-    color: "#64748b",
-    marginTop: "12px",
-    fontStyle: "italic",
-  },
-  // action buttons -------------------------------------------------------------------------
-  btnRow: { display: "flex", alignItems: "center", gap: "12px" },
-  btnPrimary: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    background: "#1e293b",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "6px",
-    padding: "8px 16px",
-    fontSize: "13px",
-    fontWeight: 500,
-    cursor: "pointer",
-  },
-  btnSecondary: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    background: "#ffffff",
-    color: "#374151",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-    padding: "8px 16px",
-    fontSize: "13px",
-    fontWeight: 500,
-    cursor: "pointer",
-  },
-  // table ---------------------------------------------------------------------------------
-  tableWrap: {
-    background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "12px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-    overflow: "hidden",
-  },
-  tableScroll: { overflowX: "auto" as const },
-  table: { width: "100%", borderCollapse: "collapse" as const, fontSize: "13px" },
-  thead: { background: "#f8fafc", borderBottom: "1px solid #f1f5f9" },
-  th: {
-    padding: "10px 16px",
-    textAlign: "left" as const,
-    fontSize: "11px",
-    fontWeight: 600,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.05em",
-    color: "#64748b",
-  },
-  td: { padding: "10px 16px", color: "#374151", borderBottom: "1px solid #f1f5f9" },
-  tableFooter: {
-    borderTop: "1px solid #f1f5f9",
-    padding: "6px 16px",
-    fontSize: "11px",
-    color: "#94a3b8",
-  },
-  // empty state -------------------------------------------------------------------------
-  emptyBox: {
-    background: "#ffffff",
-    border: "1px dashed #e2e8f0",
-    borderRadius: "12px",
-    padding: "64px 0",
-    textAlign: "center" as const,
-  },
-  emptyText: { fontSize: "13px", color: "#94a3b8", marginTop: "12px" },
-};
-
 // ----- STATUS ----------------------------------------------------------------------------------------------------------------------------------------------------
 // CHECK IF VALUES MATCH W/ THE BACKEND TABLE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-const statusStyle = (value: string): React.CSSProperties => {
+const getStatusClass = (value: string): string => {
   if (value === "Paid" || value === "Valid")
-    return { background: "#f0fdf4", color: "#15803d", border: "1px solid #3cec7a", borderRadius: "999px", padding: "2px 8px", fontSize: "11px", fontWeight: 500, display: "inline-block" };
+    return "bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
   if (value === "Unpaid" || value === "Expired")
-    return { background: "#fef2f2", color: "#dc2626", border: "1px solid #ff6060", borderRadius: "999px", padding: "2px 8px", fontSize: "11px", fontWeight: 500, display: "inline-block" };
+    return "bg-red-50 text-red-600 border border-red-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
   if (value === "Suspended")
-    return { background: "#fff1cf", color: "#c36319", border: "1px solid #f7ab48", borderRadius: "999px", padding: "2px 8px", fontSize: "11px", fontWeight: 500, display: "inline-block" };
-  return { background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0", borderRadius: "999px", padding: "2px 8px", fontSize: "11px", fontWeight: 500, display: "inline-block" };
+    return "bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
+  return "bg-slate-100 text-slate-600 border border-slate-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
 };
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // ----- REUSABLE TEXT FIELDS ----------------------------------------------------------------------------------------------------------------------------------------------------
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <label style={S.label}>{children}</label>
+  <label className="block text-[13px] font-medium text-slate-700 mb-1">{children}</label>
 );
 
 // text field --------------------------------------
 const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input {...props} style={S.input} />
+  <input
+    {...props}
+    className="w-full border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-300 transition-colors"
+  />
 );
 
 // dropdown -----------------------------------------
@@ -334,7 +154,11 @@ const SelectField = ({ placeholder, options, value, onChange }: {
   value: string;
   onChange: (v: string) => void;
 }) => (
-  <select value={value} onChange={e => onChange(e.target.value)} style={S.select}>
+  <select
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    className="w-full border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 outline-none appearance-auto focus:border-slate-300 focus:ring-1 focus:ring-slate-300 transition-colors"
+  >
     {placeholder && <option value="">{placeholder}</option>}
     {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
   </select>
@@ -347,7 +171,7 @@ interface DateRangeFilter { extra_value: string; start_date: string; end_date: s
 
 // driver -------------------------------------------------------------
 const DriversFilterPanel = ({ value, onChange }: { value: DriversFilter; onChange: (v: DriversFilter) => void }) => (
-  <div style={S.spaceY}>
+  <div className="flex flex-col gap-4">
     <div>
       {/* liscence type */}
       <Label>License Type</Label>
@@ -376,7 +200,7 @@ const DriversFilterPanel = ({ value, onChange }: { value: DriversFilter; onChang
     <div>
       {/* age range */}
       <Label>Age Range</Label>
-      <div style={S.row}>
+      <div className="flex gap-2">
         <Input type="number" placeholder="Min age" value={value.min_age} onChange={e => onChange({ ...value, min_age: e.target.value })} />
         <Input type="number" placeholder="Max age" value={value.max_age} onChange={e => onChange({ ...value, max_age: e.target.value })} />
       </div>
@@ -409,7 +233,7 @@ const DateRangePanel = ({ extraLabel, value, onChange }: {
   value: DateRangeFilter;
   onChange: (v: DateRangeFilter) => void;
 }) => (
-  <div style={S.spaceY}>
+  <div className="flex flex-col gap-4">
     <div>
       <Label>{extraLabel}</Label>
       <Input placeholder={`Enter ${extraLabel.toLowerCase()}`} value={value.extra_value} onChange={e => onChange({ ...value, extra_value: e.target.value })} />
@@ -560,38 +384,43 @@ const ReportsPage = () => {
   const columns = COLUMNS[reportType];
 
   return (
-    <div style={S.page} onClick={() => dropdownOpen && setDropdownOpen(false)}>
+    <div className="w-full p-6 flex flex-col gap-6" onClick={() => dropdownOpen && setDropdownOpen(false)}>
 
       {/* top panels */}
-      <div style={S.topGrid}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-6">
 
         {/* select report */}
-        <div style={S.card}>
-          <p style={S.cardTitle}>Select Report</p>
-          <p style={S.cardSubtitle}>Choose a report type to generate</p>
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+          <p className="text-[15px] font-semibold text-slate-800 m-0">Select Report</p>
+          <p className="text-[13px] text-slate-500 mt-0.5 mb-0">Choose a report type to generate</p>
 
-          <div style={S.fieldWrap}>
+          <div className="mt-4">
             <Label>Report Type</Label>
 
             {/* custom dropdown */}
-            <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
-              <button style={S.dropdownBtn} onClick={() => setDropdownOpen(p => !p)}>
+            <div className="relative" onClick={e => e.stopPropagation()}>
+              <button className="w-full flex items-center justify-between border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 cursor-pointer" onClick={() => setDropdownOpen(p => !p)}>
                 {reportType}
-                {/* not really necessary, can be removed */}
-                <svg style={{ width: 16, height: 16, color: "#94a3b8", transform: dropdownOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} viewBox="0 0 20 20" fill="currentColor">
+                <svg className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${dropdownOpen ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                 </svg>
               </button>
 
               {dropdownOpen && (
-                <ul style={{ ...S.dropdownList, listStyle: "none", margin: 0, padding: 0 }}>
+                <ul className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg z-20 overflow-hidden list-none m-0 p-0">
                   {REPORT_TYPES.map(r => (
                     <li key={r}>
-                      <button style={S.dropdownItem(r === reportType)} onClick={() => handleSelectReport(r)}>
+                      <button
+                        className={`w-full flex items-center justify-between px-3 py-2 text-[13px] bg-transparent border-none cursor-pointer text-left transition-colors ${
+                          r === reportType
+                            ? "text-indigo-600 font-semibold bg-indigo-50/50"
+                            : "text-slate-700 font-normal hover:bg-slate-50"
+                        }`}
+                        onClick={() => handleSelectReport(r)}
+                      >
                         {r}
-                        {/* not really necessary, can be removed */}
                         {r === reportType && (
-                          <svg style={{ width: 14, height: 14 }} viewBox="0 0 20 20" fill="currentColor">
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
                           </svg>
                         )}
@@ -602,27 +431,27 @@ const ReportsPage = () => {
               )}
             </div>
 
-            <p style={S.descText}>{REPORT_DESCRIPTIONS[reportType]}</p>
+            <p className="text-[13px] text-slate-500 mt-3 italic">{REPORT_DESCRIPTIONS[reportType]}</p>
           </div>
         </div>
 
         {/* filter parameters */}
-        <div style={S.card}>
-          <p style={S.cardTitle}>Filter Parameters</p>
-          <p style={S.cardSubtitle}>Specify filter criteria for the report</p>
-          <div style={S.fieldWrap}>
+        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+          <p className="text-[15px] font-semibold text-slate-800 m-0">Filter Parameters</p>
+          <p className="text-[13px] text-slate-500 mt-0.5 mb-0">Specify filter criteria for the report</p>
+          <div className="mt-4">
             {renderFilterPanel()}
           </div>
         </div>
       </div>
 
       {/* action buttons */}
-      <div style={S.btnRow}>
-        <button style={S.btnPrimary} onClick={handleGenerate}>
+      <div className="flex items-center gap-3">
+        <button className="inline-flex items-center gap-2 bg-slate-800 text-white border-none rounded-md px-4 py-2 text-[13px] font-medium cursor-pointer hover:bg-slate-700 transition-colors" onClick={handleGenerate}>
           <FileText size={15} />
           Generate Report
         </button>
-        <button style={S.btnSecondary} onClick={handleExportCSV}>
+        <button className="inline-flex items-center gap-2 bg-white text-slate-700 border border-slate-200 rounded-md px-4 py-2 text-[13px] font-medium cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-colors" onClick={handleExportCSV}>
           <Download size={15} />
           Export to CSV
         </button>
@@ -630,13 +459,13 @@ const ReportsPage = () => {
 
       {/* results table */}
       {rows.length > 0 && (
-        <div style={S.tableWrap}>
-          <div style={S.tableScroll}>
-            <table style={S.table}>
-              <thead style={S.thead}>
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]">
+              <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   {columns.map(col => (
-                    <th key={col} style={S.th}>{col}</th>
+                    <th key={col} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">{col}</th>
                   ))}
                 </tr>
               </thead>
@@ -644,9 +473,9 @@ const ReportsPage = () => {
                 {rows.map((row, i) => (
                   <tr key={i}>
                     {columns.map(col => (
-                      <td key={col} style={S.td}>
+                      <td key={col} className="px-4 py-2.5 text-slate-700 border-b border-slate-100">
                         {col === "Status"
-                          ? <span style={statusStyle(String(row[col] ?? ""))}>{row[col]}</span>
+                          ? <span className={getStatusClass(String(row[col] ?? ""))}>{row[col]}</span>
                           : (row[col] ?? "—")}
                       </td>
                     ))}
@@ -655,7 +484,7 @@ const ReportsPage = () => {
               </tbody>
             </table>
           </div>
-          <div style={S.tableFooter}>
+          <div className="border-t border-slate-100 px-4 py-1.5 text-[11px] text-slate-400">
             {rows.length} record{rows.length !== 1 ? "s" : ""} found
           </div>
         </div>
@@ -663,10 +492,10 @@ const ReportsPage = () => {
 
       {/* empty state */}
       {!hasGenerated && (
-        <div style={S.emptyBox}>
-          <FileText size={40} color="#cbd5e1" style={{ margin: "0 auto" }} />
-          <p style={S.emptyText}>
-            Select a report type and click <strong style={{ color: "#475569" }}>Generate Report</strong> to view results.
+        <div className="bg-white border border-dashed border-slate-200 rounded-xl py-16 text-center">
+          <FileText size={40} className="mx-auto text-slate-300" />
+          <p className="text-[13px] text-slate-400 mt-3">
+            Select a report type and click <strong className="text-slate-600">Generate Report</strong> to view results.
           </p>
         </div>
       )}
