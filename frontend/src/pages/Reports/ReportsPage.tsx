@@ -2,6 +2,24 @@ import { useState } from "react";
 import { FileText, Download } from "lucide-react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+
 // ----- REPORT TYPE ----------------------------------------------------------------------------------------------------------------------------------------------------
 // restricts reportType to only these values
 type ReportType =
@@ -307,22 +325,7 @@ const getStatusClass = (value: string): string => {
 };
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ----- REUSABLE TEXT FIELDS ----------------------------------------------------------------------------------------------------------------------------------------------------
-const Label = ({ children }: { children: React.ReactNode }) => (
-  <label className="block text-[13px] font-medium text-slate-700 mb-1">
-    {children}
-  </label>
-);
-
-// text field --------------------------------------
-const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input
-    {...props}
-    className="w-full border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-300 transition-colors"
-  />
-);
-
-// dropdown -----------------------------------------
+// dropdown helper for filter inputs -----------------------------------------
 const SelectField = ({
   placeholder,
   options,
@@ -337,7 +340,7 @@ const SelectField = ({
   <select
     value={value}
     onChange={(e) => onChange(e.target.value)}
-    className="w-full border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 outline-none appearance-auto focus:border-slate-300 focus:ring-1 focus:ring-slate-300 transition-colors"
+    className="w-full border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 outline-none appearance-auto focus:border-slate-300 focus:ring-1 focus:ring-slate-300 transition-colors h-9"
   >
     {placeholder && <option value="">{placeholder}</option>}
     {options.map((o) => (
@@ -371,68 +374,74 @@ const DriversFilterPanel = ({
   value: DriversFilter;
   onChange: (v: DriversFilter) => void;
 }) => (
-  <div className="flex flex-col gap-4">
-    <div>
-      {/* liscence type */}
-      <Label>License Type</Label>
-      <SelectField
-        value={value.license_type}
-        onChange={(v) => onChange({ ...value, license_type: v })}
-        placeholder="Select license type"
-        options={[
-          { value: "Non-Professional", label: "Non-Professional" },
-          { value: "Professional", label: "Professional" },
-          { value: "Student Permit", label: "Student Permit" },
-        ]}
-      />
-    </div>
-    <div>
-      {/* license status */}
-      <Label>License Status</Label>
-      <SelectField
-        value={value.license_status}
-        onChange={(v) => onChange({ ...value, license_status: v })}
-        placeholder="Select status"
-        options={[
-          { value: "Valid", label: "Valid" },
-          { value: "Expired", label: "Expired" },
-          { value: "Suspended", label: "Suspended" },
-          { value: "Revoked", label: "Revoked" },
-        ]}
-      />
-    </div>
-    <div>
-      {/* age range */}
-      <Label>Age Range</Label>
+  <FieldGroup className="gap-y-4">
+    <FieldSet className="gap-y-1.5">
+      <FieldLabel>License Type</FieldLabel>
+      <Field>
+        <SelectField
+          value={value.license_type}
+          onChange={(v) => onChange({ ...value, license_type: v })}
+          placeholder="Select license type"
+          options={[
+            { value: "Non-Professional", label: "Non-Professional" },
+            { value: "Professional", label: "Professional" },
+            { value: "Student Permit", label: "Student Permit" },
+          ]}
+        />
+      </Field>
+    </FieldSet>
+    <FieldSet className="gap-y-1.5">
+      <FieldLabel>License Status</FieldLabel>
+      <Field>
+        <SelectField
+          value={value.license_status}
+          onChange={(v) => onChange({ ...value, license_status: v })}
+          placeholder="Select status"
+          options={[
+            { value: "Valid", label: "Valid" },
+            { value: "Expired", label: "Expired" },
+            { value: "Suspended", label: "Suspended" },
+            { value: "Revoked", label: "Revoked" },
+          ]}
+        />
+      </Field>
+    </FieldSet>
+    <FieldSet className="gap-y-1.5">
+      <FieldLabel>Age Range</FieldLabel>
       <div className="flex gap-2">
-        <Input
-          type="number"
-          placeholder="Min age"
-          value={value.min_age}
-          onChange={(e) => onChange({ ...value, min_age: e.target.value })}
-        />
-        <Input
-          type="number"
-          placeholder="Max age"
-          value={value.max_age}
-          onChange={(e) => onChange({ ...value, max_age: e.target.value })}
-        />
+        <Field className="flex-1">
+          <Input
+            type="number"
+            placeholder="Min age"
+            value={value.min_age}
+            onChange={(e) => onChange({ ...value, min_age: e.target.value })}
+          />
+        </Field>
+        <Field className="flex-1">
+          <Input
+            type="number"
+            placeholder="Max age"
+            value={value.max_age}
+            onChange={(e) => onChange({ ...value, max_age: e.target.value })}
+          />
+        </Field>
       </div>
-    </div>
-    <div>
-      {/* sex */}
-      <Label>Sex</Label>
-      <SelectField
-        value={value.sex}
-        onChange={(v) => onChange({ ...value, sex: v })}
-        placeholder="Select sex"
-        options={[
-          { value: "Male", label: "Male" },
-          { value: "Female", label: "Female" },
-        ]}
-      />
-    </div>
-  </div>
+    </FieldSet>
+    <FieldSet className="gap-y-1.5">
+      <FieldLabel>Sex</FieldLabel>
+      <Field>
+        <SelectField
+          value={value.sex}
+          onChange={(v) => onChange({ ...value, sex: v })}
+          placeholder="Select sex"
+          options={[
+            { value: "Male", label: "Male" },
+            { value: "Female", label: "Female" },
+          ]}
+        />
+      </Field>
+    </FieldSet>
+  </FieldGroup>
 );
 
 // for date only filters ----------------------------------------------------
@@ -443,14 +452,16 @@ const DateOnlyPanel = ({
   value: string;
   onChange: (v: string) => void;
 }) => (
-  <div>
-    <Label>As of Date</Label>
-    <Input
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  </div>
+  <FieldSet className="gap-y-1.5">
+    <FieldLabel>As of Date</FieldLabel>
+    <Field>
+      <Input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </Field>
+  </FieldSet>
 );
 
 // for date range / start and end -----------------------------------------------------------
@@ -463,38 +474,43 @@ const DateRangePanel = ({
   value: DateRangeFilter;
   onChange: (v: DateRangeFilter) => void;
 }) => (
-  <div className="flex flex-col gap-4">
-    <div>
-      <Label>{extraLabel}</Label>
-      <Input
-        placeholder={`Enter ${extraLabel.toLowerCase()}`}
-        value={value.extra_value}
-        onChange={(e) => onChange({ ...value, extra_value: e.target.value })}
-      />
-    </div>
-    <div>
-      <Label>Start Date</Label>
-      <Input
-        type="date"
-        value={value.start_date}
-        onChange={(e) => onChange({ ...value, start_date: e.target.value })}
-      />
-    </div>
-    <div>
-      <Label>End Date</Label>
-      <Input
-        type="date"
-        value={value.end_date}
-        onChange={(e) => onChange({ ...value, end_date: e.target.value })}
-      />
-    </div>
-  </div>
+  <FieldGroup className="gap-y-4">
+    <FieldSet className="gap-y-1.5">
+      <FieldLabel>{extraLabel}</FieldLabel>
+      <Field>
+        <Input
+          placeholder={`Enter ${extraLabel.toLowerCase()}`}
+          value={value.extra_value}
+          onChange={(e) => onChange({ ...value, extra_value: e.target.value })}
+        />
+      </Field>
+    </FieldSet>
+    <FieldSet className="gap-y-1.5">
+      <FieldLabel>Start Date</FieldLabel>
+      <Field>
+        <Input
+          type="date"
+          value={value.start_date}
+          onChange={(e) => onChange({ ...value, start_date: e.target.value })}
+        />
+      </Field>
+    </FieldSet>
+    <FieldSet className="gap-y-1.5">
+      <FieldLabel>End Date</FieldLabel>
+      <Field>
+        <Input
+          type="date"
+          value={value.end_date}
+          onChange={(e) => onChange({ ...value, end_date: e.target.value })}
+        />
+      </Field>
+    </FieldSet>
+  </FieldGroup>
 );
 
 // ----- MAIN PAGE ----------------------------------------------------------------------------------------------------------------------------------------------------
 const ReportsPage = () => {
   const [reportType, setReportType] = useState<ReportType>("Drivers by Filter");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
 
@@ -525,7 +541,6 @@ const ReportsPage = () => {
 
   const handleSelectReport = (r: ReportType) => {
     setReportType(r);
-    setDropdownOpen(false);
     setRows([]);
     setHasGenerated(false);
   };
@@ -600,14 +615,16 @@ const ReportsPage = () => {
       // -----------------------------------------
       case "Vehicles by Driver":
         return (
-          <div>
-            <Label>Driver Name</Label>
-            <Input
-              placeholder="Enter driver name"
-              value={vehicleDriver}
-              onChange={(e) => setVehicleDriver(e.target.value)}
-            />
-          </div>
+          <FieldSet className="gap-y-1.5">
+            <FieldLabel>Driver Name</FieldLabel>
+            <Field>
+              <Input
+                placeholder="Enter driver name"
+                value={vehicleDriver}
+                onChange={(e) => setVehicleDriver(e.target.value)}
+              />
+            </Field>
+          </FieldSet>
         );
       // -----------------------------------------
       // -----------------------------------------
@@ -630,32 +647,36 @@ const ReportsPage = () => {
       // -----------------------------------------
       case "Violations by Type":
         return (
-          <div>
-            <Label>Year</Label>
-            <Input
-              type="number"
-              placeholder="e.g. 2024"
-              value={violByType.start_date}
-              onChange={(e) =>
-                setViolByType((p) => ({ ...p, start_date: e.target.value }))
-              }
-            />
-          </div>
+          <FieldSet className="gap-y-1.5">
+            <FieldLabel>Year</FieldLabel>
+            <Field>
+              <Input
+                type="number"
+                placeholder="e.g. 2024"
+                value={violByType.start_date}
+                onChange={(e) =>
+                  setViolByType((p) => ({ ...p, start_date: e.target.value }))
+                }
+              />
+            </Field>
+          </FieldSet>
         );
       // -----------------------------------------
       // -----------------------------------------
       case "Violations by Location":
         return (
-          <div>
-            <Label>City / Region</Label>
-            <Input
-              placeholder="Enter city or region"
-              value={violByLoc.extra_value}
-              onChange={(e) =>
-                setViolByLoc((p) => ({ ...p, extra_value: e.target.value }))
-              }
-            />
-          </div>
+          <FieldSet className="gap-y-1.5">
+            <FieldLabel>City / Region</FieldLabel>
+            <Field>
+              <Input
+                placeholder="Enter city or region"
+                value={violByLoc.extra_value}
+                onChange={(e) =>
+                  setViolByLoc((p) => ({ ...p, extra_value: e.target.value }))
+                }
+              />
+            </Field>
+          </FieldSet>
         );
       // -----------------------------------------
     }
@@ -665,10 +686,7 @@ const ReportsPage = () => {
   const columns = COLUMNS[reportType];
 
   return (
-    <div
-      className="w-full p-6 flex flex-col gap-6"
-      onClick={() => dropdownOpen && setDropdownOpen(false)}
-    >
+    <div className="w-full p-6 flex flex-col gap-6">
       {/* top panels */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-6">
         {/* select report */}
@@ -681,44 +699,44 @@ const ReportsPage = () => {
           </p>
 
           <div className="mt-4">
-            <Label>Report Type</Label>
-
-            {/* custom dropdown */}
-            <div className="relative" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="w-full flex items-center justify-between border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 cursor-pointer"
-                onClick={() => setDropdownOpen((p) => !p)}
-              >
-                {reportType}
-                <svg
-                  className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${dropdownOpen ? "rotate-180" : ""}`}
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-
-              {dropdownOpen && (
-                <ul className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg z-20 overflow-hidden list-none m-0 p-0">
-                  {REPORT_TYPES.map((r) => (
-                    <li key={r}>
-                      <button
-                        className={`w-full flex items-center justify-between px-3 py-2 text-[13px] bg-transparent border-none cursor-pointer text-left transition-colors ${
+            <FieldSet className="gap-y-1.5">
+              <FieldLabel>Report Type</FieldLabel>
+              <Field>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full flex items-center justify-between border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 cursor-pointer font-normal h-9 hover:bg-slate-100"
+                    >
+                      <span>{reportType}</span>
+                      <svg
+                        className="w-4 h-4 text-slate-400"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-80 overflow-y-auto">
+                    {REPORT_TYPES.map((r) => (
+                      <DropdownMenuItem
+                        key={r}
+                        onClick={() => handleSelectReport(r)}
+                        className={`cursor-pointer justify-between text-[13px] ${
                           r === reportType
                             ? "text-indigo-600 font-semibold bg-indigo-50/50"
-                            : "text-slate-700 font-normal hover:bg-slate-50"
+                            : "text-slate-700"
                         }`}
-                        onClick={() => handleSelectReport(r)}
                       >
-                        {r}
+                        <span>{r}</span>
                         {r === reportType && (
                           <svg
-                            className="w-3.5 h-3.5"
+                            className="w-3.5 h-3.5 text-indigo-600"
                             viewBox="0 0 20 20"
                             fill="currentColor"
                           >
@@ -729,12 +747,12 @@ const ReportsPage = () => {
                             />
                           </svg>
                         )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </Field>
+            </FieldSet>
 
             <p className="text-[13px] text-slate-500 mt-3 italic">
               {REPORT_DESCRIPTIONS[reportType]}
@@ -756,63 +774,56 @@ const ReportsPage = () => {
 
       {/* action buttons */}
       <div className="flex items-center gap-3">
-        <button
-          className="inline-flex items-center gap-2 bg-slate-800 text-white border-none rounded-md px-4 py-2 text-[13px] font-medium cursor-pointer hover:bg-slate-700 transition-colors"
-          onClick={handleGenerate}
-        >
+        <Button onClick={handleGenerate} className="cursor-pointer gap-2">
           <FileText size={15} />
           Generate Report
-        </button>
-        <button
-          className="inline-flex items-center gap-2 bg-white text-slate-700 border border-slate-200 rounded-md px-4 py-2 text-[13px] font-medium cursor-pointer hover:bg-slate-50 hover:border-slate-300 transition-colors"
+        </Button>
+        <Button
+          variant="outline"
           onClick={handleExportCSV}
+          className="cursor-pointer gap-2"
         >
           <Download size={15} />
           Export to CSV
-        </button>
+        </Button>
       </div>
 
       {/* results table */}
       {rows.length > 0 && (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px]">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  {columns.map((col) => (
-                    <th
-                      key={col}
-                      className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500"
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => (
-                  <tr key={i}>
-                    {columns.map((col) => (
-                      <td
-                        key={col}
-                        className="px-4 py-2.5 text-slate-700 border-b border-slate-100"
-                      >
-                        {col === "Status" ? (
-                          <span
-                            className={getStatusClass(String(row[col] ?? ""))}
-                          >
-                            {row[col]}
-                          </span>
-                        ) : (
-                          (row[col] ?? "—")
-                        )}
-                      </td>
-                    ))}
-                  </tr>
+          <Table>
+            <TableHeader className="bg-slate-50">
+              <TableRow>
+                {columns.map((col) => (
+                  <TableHead
+                    key={col}
+                    className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500"
+                  >
+                    {col}
+                  </TableHead>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row, i) => (
+                <TableRow key={i}>
+                  {columns.map((col) => (
+                    <TableCell key={col} className="px-4 py-2.5 text-slate-700">
+                      {col === "Status" ? (
+                        <span
+                          className={getStatusClass(String(row[col] ?? ""))}
+                        >
+                          {row[col]}
+                        </span>
+                      ) : (
+                        (row[col] ?? "—")
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           <div className="border-t border-slate-100 px-4 py-1.5 text-[11px] text-slate-400">
             {rows.length} record{rows.length !== 1 ? "s" : ""} found
           </div>
