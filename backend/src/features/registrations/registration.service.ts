@@ -72,14 +72,30 @@ export const getRegistrationPlateNo = async (plate_number: string) => {
 };
 
 // GET registrations WHERE status = expired
-export const getExpiredRegistrations = async () => {
+export const getExpiredRegistrations = async (max_date?: string) => {
   const connection = await pool.getConnection();
 
   try {
     await autoExpireRegistrations(connection);
-    const [result] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM vehicle_registrations WHERE expiration_date <= CURDATE() OR registration_status = 'Expired'",
-    );
+    let query = `
+      SELECT vr.*, d.full_name AS owner_name, d.license_number 
+      FROM vehicle_registrations vr 
+      LEFT JOIN vehicles v ON vr.plate_number = v.plate_number 
+      LEFT JOIN drivers d ON v.license_number = d.license_number 
+      WHERE vr.expiration_date <= CURDATE()
+    `;
+    const params: any[] = [];
+    if (max_date) {
+      query = `
+        SELECT vr.*, d.full_name AS owner_name, d.license_number 
+        FROM vehicle_registrations vr 
+        LEFT JOIN vehicles v ON vr.plate_number = v.plate_number 
+        LEFT JOIN drivers d ON v.license_number = d.license_number 
+        WHERE vr.expiration_date <= ?
+      `;
+      params.push(max_date);
+    }
+    const [result] = await connection.query<RowDataPacket[]>(query, params);
 
     return result as VehicleRegistration[];
   } catch (error) {

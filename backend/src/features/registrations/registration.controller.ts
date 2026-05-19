@@ -84,8 +84,9 @@ if (!result || result.length === 0) {
 
 // GET /api/registrations/expired
 export const getExpiredRegistrations = async (req: Request, res: Response) => {
+  const { max_date } = req.query;
   try {
-    const result = await RegistrationService.getExpiredRegistrations();
+    const result = await RegistrationService.getExpiredRegistrations(max_date as string);
 if (!result || result.length === 0) {
       return res
         .status(404)

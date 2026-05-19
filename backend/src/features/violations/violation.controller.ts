@@ -8,7 +8,7 @@ import { VehicleFilter, VehicleType } from "@shared";
 export const getAllViolations = async (req: Request, res: Response) => {
   try {
     const result = await ViolationService.getAllViolations();
-res.status(200).send({ success: true, data: result });
+    res.status(200).send({ success: true, data: result });
   } catch (error) {
     res.status(500).send({ success: false, message: "An error occured" });
   }
@@ -18,7 +18,9 @@ export const getViolation = async (req: Request, res: Response) => {
   const { violation_id } = req.params;
 
   if (!violation_id) {
-    return res.status(400).send({ success: false, error: "Violation id is required" });
+    return res
+      .status(400)
+      .send({ success: false, error: "Violation id is required" });
   }
 
   const id = Number(violation_id);
@@ -32,8 +34,10 @@ export const getViolation = async (req: Request, res: Response) => {
 
   try {
     const result = await ViolationService.getViolation(id);
-if (!result) {
-      return res.status(404).send({ success: false, message: "Violation not found" });
+    if (!result) {
+      return res
+        .status(404)
+        .send({ success: false, message: "Violation not found" });
     }
 
     res.status(201).send({ success: true, data: result });
@@ -66,14 +70,17 @@ export const createViolation = async (req: Request, res: Response) => {
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
-      return res.status(400).send({ success: false, message: `'${field}' is missing` });
+      return res
+        .status(400)
+        .send({ success: false, message: `'${field}' is missing` });
     }
   }
 
   if (isNaN(new Date(date).getTime())) {
-    return res
-      .status(400)
-      .send({ success: false, message: "Dates must be in a valid format (YYYY-MM-DD)" });
+    return res.status(400).send({
+      success: false,
+      message: "Dates must be in a valid format (YYYY-MM-DD)",
+    });
   }
 
   try {
@@ -87,9 +94,11 @@ export const createViolation = async (req: Request, res: Response) => {
       license_number,
       plate_number,
     } as TrafficViolation);
-res
-      .status(200)
-      .send({ success: true, message: "Violation created successfully", data: result });
+    res.status(200).send({
+      success: true,
+      message: "Violation created successfully",
+      data: result,
+    });
   } catch (error: any) {
     // should never happen since violation_id is auto-incremented
     if (error.code === "ER_DUP_ENTRY") {
@@ -102,11 +111,15 @@ res
     if (error.code === "ER_NO_REFERENCED_ROW_2") {
       return res.status(409).send({
         success: false,
-        message: error.message || "The referenced driver's license number or vehicle plate number does not exist.",
+        message:
+          error.message ||
+          "The referenced driver's license number or vehicle plate number does not exist.",
       });
     }
 
-    res.status(500).send({ success: false, message: "An error occured", error });
+    res
+      .status(500)
+      .send({ success: false, message: "An error occured", error });
   }
 };
 
@@ -114,7 +127,9 @@ export const deleteViolation = async (req: Request, res: Response) => {
   const { violation_id } = req.params;
 
   if (!violation_id) {
-    return res.status(400).send({ success: false, message: "Violation id is required" });
+    return res
+      .status(400)
+      .send({ success: false, message: "Violation id is required" });
   }
 
   const id = Number(violation_id);
@@ -127,13 +142,17 @@ export const deleteViolation = async (req: Request, res: Response) => {
 
   try {
     const result = await ViolationService.deleteViolation(id);
-if (!result) {
-      return res.status(404).send({ success: false, message: "Violation not found" });
+    if (!result) {
+      return res
+        .status(404)
+        .send({ success: false, message: "Violation not found" });
     }
 
-    res
-      .status(200)
-      .send({ success: true, message: "Violation successfully deleted", deleted_id: result });
+    res.status(200).send({
+      success: true,
+      message: "Violation successfully deleted",
+      deleted_id: result,
+    });
   } catch (error) {
     res.status(500).send({ success: false, message: "An error occured" });
   }
@@ -143,7 +162,9 @@ export const updateViolation = async (req: Request, res: Response) => {
   const { violation_id } = req.params;
 
   if (!violation_id) {
-    return res.status(400).send({ success: false, message: "Violation id is required" });
+    return res
+      .status(400)
+      .send({ success: false, message: "Violation id is required" });
   }
 
   const id = Number(violation_id);
@@ -177,14 +198,17 @@ export const updateViolation = async (req: Request, res: Response) => {
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
-      return res.status(400).send({ success: false, message: `'${field}' is missing` });
+      return res
+        .status(400)
+        .send({ success: false, message: `'${field}' is missing` });
     }
   }
 
   if (isNaN(new Date(date).getTime())) {
-    return res
-      .status(400)
-      .send({ success: false, message: "Dates must be in a valid format (YYYY-MM-DD)" });
+    return res.status(400).send({
+      success: false,
+      message: "Dates must be in a valid format (YYYY-MM-DD)",
+    });
   }
 
   try {
@@ -199,18 +223,24 @@ export const updateViolation = async (req: Request, res: Response) => {
       license_number,
       plate_number,
     } as TrafficViolation);
-if (!result) {
-      return res.status(404).send({ success: false, message: "Violation not found" });
+    if (!result) {
+      return res
+        .status(404)
+        .send({ success: false, message: "Violation not found" });
     }
 
-    res
-      .status(200)
-      .send({ success: true, message: "Violation updated successfully", data: result });
+    res.status(200).send({
+      success: true,
+      message: "Violation updated successfully",
+      data: result,
+    });
   } catch (error: any) {
     if (error.code === "ER_NO_REFERENCED_ROW_2") {
       return res.status(409).send({
         success: false,
-        message: error.message || "The referenced driver's license number or vehicle plate number does not exist.",
+        message:
+          error.message ||
+          "The referenced driver's license number or vehicle plate number does not exist.",
       });
     }
     res.status(500).send({ success: false, message: "An error occured" });
@@ -332,8 +362,12 @@ export const filterByDriver = async (req: Request, res: Response) => {
       max_bdate: max_bdate ? new Date(max_bdate as string) : null,
       min_issued_at: min_issued_at ? new Date(min_issued_at as string) : null,
       max_issued_at: max_issued_at ? new Date(max_issued_at as string) : null,
-      min_expires_at: min_expires_at ? new Date(min_expires_at as string) : null,
-      max_expires_at: max_expires_at ? new Date(max_expires_at as string) : null,
+      min_expires_at: min_expires_at
+        ? new Date(min_expires_at as string)
+        : null,
+      max_expires_at: max_expires_at
+        ? new Date(max_expires_at as string)
+        : null,
     };
 
     const vMin = min_date ? new Date(min_date as string) : null;
@@ -352,7 +386,9 @@ export const filterByDriver = async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred", error });
+    res
+      .status(500)
+      .send({ success: false, message: "An error occurred", error });
   }
 };
 
@@ -429,7 +465,7 @@ export const filterByVehicle = async (req: Request, res: Response) => {
 };
 
 export const groupTypeByYear = async (req: Request, res: Response) => {
-  const { year } = req.query;
+  const { year } = req.params;
 
   if (!year) {
     return res.status(400).json({
@@ -438,12 +474,19 @@ export const groupTypeByYear = async (req: Request, res: Response) => {
     });
   }
 
+  const parsed = Number(year);
+
+  if (isNaN(parsed)) {
+    return res.status(400).json({
+      success: false,
+      message: "Year must be a valid number",
+    });
+  }
+
   try {
-    const result = await ViolationService.getTypeCountByYear(Number(year));
+    const result = await ViolationService.getTypeCountByYear(parsed);
     res.status(200).json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-

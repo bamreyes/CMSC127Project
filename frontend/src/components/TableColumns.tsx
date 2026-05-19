@@ -7,6 +7,7 @@ import type {
   Vehicle,
   TrafficViolation,
   VehicleRegistration,
+  ViolationTypeCount,
 } from "@shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,8 +32,8 @@ const formatDate = (val: any) => {
 
 // --- Driver Columns ---
 export const getDriverColumns = (
-  onDelete: (id: string) => void,
-  onEdit: (driver: Driver) => void
+  onDelete?: (id: string) => void,
+  onEdit?: (driver: Driver) => void,
 ): ColumnDef<Driver>[] => [
   {
     accessorKey: "license_number",
@@ -71,11 +72,13 @@ export const getDriverColumns = (
         classes = "bg-amber-50 text-amber-700 border-amber-200/60";
       }
       return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border tracking-wider uppercase ${classes}`}>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border tracking-wider uppercase ${classes}`}
+        >
           {status}
         </span>
       );
-    }
+    },
   },
   {
     accessorKey: "issued_at",
@@ -87,39 +90,47 @@ export const getDriverColumns = (
     header: "Expiry Date",
     cell: ({ getValue }) => formatDate(getValue()),
   },
-    {
-        id: "actions",
-        cell: ({ row }) => {
+
+  ...(onDelete && onEdit
+    ? [
+        {
+          id: "actions",
+          cell: ({ row }: any) => {
             const driver = row.original;
             return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant = "ghost" className = "h-8 w-8 p-0">
-                            <MoreHorizontal className = "h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align = "end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick = {() => onEdit(driver)}>
-                            <Pencil className = "mr-2 h-4 w-4" />
-                            Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick = {() => onDelete(driver.license_number)} className = "text-red-600 focus:text-red-600">
-                            <Trash2 className = "mr-2 h-4 w-4" />
-                            Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onEdit(driver)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDelete(driver.license_number)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             );
+          },
         },
-    }
+      ]
+    : []),
 ];
 
 // --- Vehicle Columns ---
 export const getVehicleColumns = (
-    onDelete: (id: string) => void,
-    onEdit: (vehicle: Vehicle) => void,
+  onDelete: (id: string) => void,
+  onEdit: (vehicle: Vehicle) => void,
 ): ColumnDef<Vehicle>[] => [
   {
     accessorKey: "plate_number",
@@ -133,9 +144,13 @@ export const getVehicleColumns = (
       return (
         <div className="flex flex-col">
           {vehicle.owner_name ? (
-            <span className="font-medium text-slate-900">{vehicle.owner_name}</span>
+            <span className="font-medium text-slate-900">
+              {vehicle.owner_name}
+            </span>
           ) : (
-            <span className="font-medium italic text-slate-500">Unassigned</span>
+            <span className="font-medium italic text-slate-500">
+              Unassigned
+            </span>
           )}
           <span className="text-xs text-slate-500">
             {vehicle.license_number || "No License"}
@@ -172,37 +187,42 @@ export const getVehicleColumns = (
     accessorKey: "color",
     header: "Color",
   },
-    {
-        id: "actions",
-        cell: ({ row }) => {
-            const vehicle = row.original;
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant = "ghost" className = "h-8 w-8 p-0">
-                            <MoreHorizontal className = "h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align = "end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick = {() => onEdit(vehicle)}>
-                            <Pencil className = "mr-2 h-4 w-4" />Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick = {() => onDelete(vehicle.plate_number)} className = "text-red-600 focus:text-red-600">
-                            <Trash2 className = "mr-2 h-4 w-4" />Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            );
-        },
-    }
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const vehicle = row.original;
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onEdit(vehicle)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(vehicle.plate_number)}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
+  },
 ];
 
 // --- Violation Columns ---
 export const getViolationColumns = (
-    onDelete: (id: string | number) => void,
-    onEdit: (violation: TrafficViolation) => void,
+  onDelete: (id: string | number) => void,
+  onEdit: (violation: TrafficViolation) => void,
 ): ColumnDef<TrafficViolation>[] => [
   {
     accessorKey: "violation_id",
@@ -221,9 +241,13 @@ export const getViolationColumns = (
       return (
         <div className="flex flex-col">
           {violation.violator_name ? (
-            <span className="font-medium text-slate-900">{violation.violator_name}</span>
+            <span className="font-medium text-slate-900">
+              {violation.violator_name}
+            </span>
           ) : (
-            <span className="font-medium italic text-slate-500">Unassigned / Unknown</span>
+            <span className="font-medium italic text-slate-500">
+              Unassigned / Unknown
+            </span>
           )}
           <span className="text-xs text-slate-500">
             {violation.license_number || "No License"}
@@ -270,43 +294,50 @@ export const getViolationColumns = (
         classes = "bg-emerald-50 text-emerald-700 border-emerald-200/60";
       }
       return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border tracking-wider uppercase ${classes}`}>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border tracking-wider uppercase ${classes}`}
+        >
           {status}
         </span>
       );
-    }
+    },
   },
-    {
-        id: "actions",
-        cell: ({ row }) => {
-            const violation = row.original;
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant = "ghost" className = "h-8 w-8 p-0">
-                            <MoreHorizontal className = "h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align = "end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick = {() => onEdit(violation)}>
-                            <Pencil className = "mr-2 h-4 w-4" />Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick = {() => onDelete(violation.violation_id)} className = "text-red-600 focus:text-red-600">
-                            <Trash2 className = "mr-2 h-4 w-4" />Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            );
-        },
-    }
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const violation = row.original;
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onEdit(violation)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(violation.violation_id)}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
+  },
 ];
 
 // --- Registration (Transaction) Columns ---
 export const getRegistrationColumns = (
-    onDelete: (id: string | number) => void,
-    onEdit: (registration: VehicleRegistration) => void,
+  onDelete: (id: string | number) => void,
+  onEdit: (registration: VehicleRegistration) => void,
 ): ColumnDef<VehicleRegistration>[] => [
   {
     accessorKey: "registration_number",
@@ -326,7 +357,9 @@ export const getRegistrationColumns = (
           {reg.owner_name ? (
             <span className="font-medium text-slate-900">{reg.owner_name}</span>
           ) : (
-            <span className="font-medium italic text-slate-500">Unassigned</span>
+            <span className="font-medium italic text-slate-500">
+              Unassigned
+            </span>
           )}
           <span className="text-xs text-slate-500">
             {reg.license_number || "No License"}
@@ -349,11 +382,13 @@ export const getRegistrationColumns = (
         classes = "bg-blue-50 text-blue-700 border-blue-200/60";
       }
       return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border tracking-wider uppercase ${classes}`}>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border tracking-wider uppercase ${classes}`}
+        >
           {status}
         </span>
       );
-    }
+    },
   },
   {
     accessorKey: "registration_date",
@@ -365,29 +400,46 @@ export const getRegistrationColumns = (
     header: "Exp Date",
     cell: ({ getValue }) => formatDate(getValue()),
   },
-    {
-        id: "actions",
-            cell: ({ row }) => {
-                const reg = row.original;
-                return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant = "ghost" className = "h-8 w-8 p-0">
-                                <MoreHorizontal className = "h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align = "end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick = {() => onEdit(reg)}>
-                                <Pencil className = "mr-2 h-4 w-4" />Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick = {() => onDelete(reg.registration_number)} className = "text-red-600 focus:text-red-600">
-                                <Trash2 className = "mr-2 h-4 w-4" />Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                );
-            },
-    }
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const reg = row.original;
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onEdit(reg)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(reg.registration_number)}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
+  },
 ];
+
+export const getViolationTypeCountColumns =
+  (): ColumnDef<ViolationTypeCount>[] => [
+    {
+      accessorKey: "violation_type",
+      header: "Type",
+    },
+    {
+      accessorKey: "count",
+      header: "Count",
+    },
+  ];

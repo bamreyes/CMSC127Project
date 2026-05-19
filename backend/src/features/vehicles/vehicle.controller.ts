@@ -1,18 +1,13 @@
 import { Request, Response } from "express";
 import * as VehicleService from "@/features/vehicles/vehicle.service";
 import { Vehicle } from "@shared";
-import {
-  DriverFilter,
-  LicenseType,
-  LicenseStatus,
-  Sex,
-} from "@shared";
+import { DriverFilter, LicenseType, LicenseStatus, Sex } from "@shared";
 
 // GET  all vehicles
 export const getAllVehicles = async (req: Request, res: Response) => {
   try {
     const result = await VehicleService.getAllVehicles();
-res.status(200).send({ success: true, data: result });
+    res.status(200).send({ success: true, data: result });
   } catch (error) {
     res.status(500).send({ success: false, message: "An error occured" });
   }
@@ -29,17 +24,15 @@ export const getVehicle = async (req: Request, res: Response) => {
   }
 
   if (typeof plate_number !== "string" || plate_number.trim() === "") {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        error: "A valid plate number string is required",
-      });
+    return res.status(400).send({
+      success: false,
+      error: "A valid plate number string is required",
+    });
   }
 
   try {
     const result = await VehicleService.getVehicle(plate_number as string);
-if (!result) {
+    if (!result) {
       return res
         .status(404)
         .send({ success: false, message: "Vehicle not found" });
@@ -97,13 +90,11 @@ export const createVehicle = async (req: Request, res: Response) => {
       color,
       license_number,
     } as Vehicle);
-res
-      .status(200)
-      .send({
-        success: true,
-        message: "Vehicle created successfully",
-        data: result,
-      });
+    res.status(200).send({
+      success: true,
+      message: "Vehicle created successfully",
+      data: result,
+    });
   } catch (error: any) {
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).send({
@@ -116,7 +107,8 @@ res
     if (error.code === "ER_NO_REFERENCED_ROW_2") {
       return res.status(409).send({
         success: false,
-        message: error.message || "The referenced license number does not exist",
+        message:
+          error.message || "The referenced license number does not exist",
       });
     }
 
@@ -135,12 +127,10 @@ export const updateVehicle = async (req: Request, res: Response) => {
   }
 
   if (typeof plate_number !== "string" || plate_number.trim() === "") {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        message: "A valid plate number string is required",
-      });
+    return res.status(400).send({
+      success: false,
+      message: "A valid plate number string is required",
+    });
   }
 
   const {
@@ -185,7 +175,7 @@ export const updateVehicle = async (req: Request, res: Response) => {
       color,
       license_number,
     } as Vehicle);
-if (!result) {
+    if (!result) {
       return res
         .status(404)
         .send({ success: false, message: "Vehicle not found" });
@@ -200,7 +190,8 @@ if (!result) {
     if (error.code === "ER_NO_REFERENCED_ROW_2") {
       return res.status(409).send({
         success: false,
-        message: error.message || "The referenced license number does not exist",
+        message:
+          error.message || "The referenced license number does not exist",
       });
     }
     res.status(500).send({
@@ -220,29 +211,25 @@ export const deleteVehicle = async (req: Request, res: Response) => {
   }
 
   if (typeof plate_number !== "string" || plate_number.trim() === "") {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        message: "A valid plate number string is required",
-      });
+    return res.status(400).send({
+      success: false,
+      message: "A valid plate number string is required",
+    });
   }
 
   try {
     const result = await VehicleService.deleteVehicle(plate_number as string);
-if (!result) {
+    if (!result) {
       return res
         .status(404)
         .send({ success: false, message: "Vehicle not found" });
     }
 
-    res
-      .status(200)
-      .send({
-        success: true,
-        message: "Vehicle successfully deleted",
-        deleted_id: result,
-      });
+    res.status(200).send({
+      success: true,
+      message: "Vehicle successfully deleted",
+      deleted_id: result,
+    });
   } catch (error: any) {
     if (error.code === "ER_ROW_IS_REFERENCED") {
       return res.status(409).send({ success: false, message: error.message });
@@ -275,7 +262,7 @@ export const filterByDriver = async (req: Request, res: Response) => {
     model,
     color,
     min_year,
-    max_year
+    max_year,
   } = req.query;
 
   const dateRanges = [
@@ -331,11 +318,8 @@ export const filterByDriver = async (req: Request, res: Response) => {
       model: (model as string) || null,
       color: (color as string) || null,
       min_year: min_year ? Number(min_year) : null,
-      max_year: max_year ? Number(max_year) : null
+      max_year: max_year ? Number(max_year) : null,
     };
-
-    const vMin = min_date ? new Date(min_date as string) : null;
-    const vMax = max_date ? new Date(max_date as string) : null;
 
     const result = await VehicleService.filterVehicleByDriver(filters);
 
@@ -350,4 +334,3 @@ export const filterByDriver = async (req: Request, res: Response) => {
       .send({ success: false, message: "An error occurred", error });
   }
 };
-

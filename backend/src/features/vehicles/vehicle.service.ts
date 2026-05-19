@@ -250,7 +250,7 @@ export const filterVehicleByDriver = async (driverFilter: DriverFilter) => {
 
   try {
     const [result] = await connection.query(
-      `SELECT v.* FROM vehicles v INNER JOIN drivers d ON v.license_number = d.license_number ${whereClause}`,
+      `SELECT v.*, d.full_name AS owner_name FROM vehicles v INNER JOIN drivers d ON v.license_number = d.license_number ${whereClause}`,
       params,
     );
 

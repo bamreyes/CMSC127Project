@@ -10,10 +10,9 @@ import { syncDriverStatuses } from "@/features/drivers/driver.service";
 export const getAllViolations = async () => {
   const connection = await pool.getConnection();
   try {
-    const [result] = (await connection.query("SELECT * FROM traffic_violations")) as any as [
-      TrafficViolation[],
-      any,
-    ];
+    const [result] = (await connection.query(
+      "SELECT * FROM traffic_violations",
+    )) as any as [TrafficViolation[], any];
     return result;
   } catch (error) {
     throw error;
@@ -43,10 +42,12 @@ export const createViolation = async (violation: TrafficViolation) => {
     // 1. Check if driver exists
     const [driver] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM drivers WHERE license_number = ?",
-      [violation.license_number]
+      [violation.license_number],
     );
     if (driver.length === 0) {
-      const err = new Error(`Driver's license number '${violation.license_number}' does not exist in the database. Please register the driver first.`);
+      const err = new Error(
+        `Driver's license number '${violation.license_number}' does not exist in the database. Please register the driver first.`,
+      );
       (err as any).code = "ER_NO_REFERENCED_ROW_2";
       throw err;
     }
@@ -54,10 +55,12 @@ export const createViolation = async (violation: TrafficViolation) => {
     // 2. Check if vehicle exists
     const [vehicle] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM vehicles WHERE plate_number = ?",
-      [violation.plate_number]
+      [violation.plate_number],
     );
     if (vehicle.length === 0) {
-      const err = new Error(`Vehicle plate number '${violation.plate_number}' does not exist in the database. Please register the vehicle first.`);
+      const err = new Error(
+        `Vehicle plate number '${violation.plate_number}' does not exist in the database. Please register the vehicle first.`,
+      );
       (err as any).code = "ER_NO_REFERENCED_ROW_2";
       throw err;
     }
@@ -97,35 +100,62 @@ export const updateViolation = async (violation: TrafficViolation) => {
   try {
     const [existing] = await connection.query<RowDataPacket[]>(
       "SELECT license_number, plate_number, violation_type, date, apprehending_officer FROM traffic_violations WHERE violation_id = ?",
-      [violation.violation_id]
+      [violation.violation_id],
     );
 
     if (existing && existing.length > 0 && existing[0]) {
       const existingRow = existing[0] as any;
+      const formatDateOnly = (d: any) => {
+        if (!d) return "";
+        const dateObj = new Date(d);
+        if (isNaN(dateObj.getTime())) return "";
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const r = String(dateObj.getDate()).padStart(2, "0");
+        return `${y}-${m}-${r}`;
+      };
+
+      const cleanString = (val: any) =>
+        val === null || val === undefined ? "" : String(val).trim();
+
       if (existingRow.license_number !== violation.license_number) {
-        const err = new Error("Security Violation: The license number of a traffic violation is immutable and cannot be edited.");
+        const err = new Error(
+          "The license number of a traffic violation is immutable and cannot be edited.",
+        );
         (err as any).code = "ER_DUP_ENTRY";
         throw err;
       }
       if (existingRow.plate_number !== violation.plate_number) {
-        const err = new Error("Security Violation: The vehicle plate number of a traffic violation is immutable and cannot be edited.");
+        const err = new Error(
+          "The vehicle plate number of a traffic violation is immutable and cannot be edited.",
+        );
         (err as any).code = "ER_DUP_ENTRY";
         throw err;
       }
       if (existingRow.violation_type !== violation.violation_type) {
-        const err = new Error("Security Violation: The violation type is immutable and cannot be edited.");
+        const err = new Error(
+          "The violation type is immutable and cannot be edited.",
+        );
         (err as any).code = "ER_DUP_ENTRY";
         throw err;
       }
-      const existingDateStr = new Date(existingRow.date).toISOString().slice(0, 10);
-      const incomingDateStr = new Date(violation.date).toISOString().slice(0, 10);
+
+      const existingDateStr = formatDateOnly(existingRow.date);
+      const incomingDateStr = formatDateOnly(violation.date);
       if (existingDateStr !== incomingDateStr) {
-        const err = new Error("Security Violation: The date of apprehension is immutable and cannot be edited.");
+        const err = new Error(
+          "The date of apprehension is immutable and cannot be edited.",
+        );
         (err as any).code = "ER_DUP_ENTRY";
         throw err;
       }
-      if (existingRow.apprehending_officer !== violation.apprehending_officer) {
-        const err = new Error("Security Violation: The apprehending officer is immutable and cannot be edited.");
+      if (
+        cleanString(existingRow.apprehending_officer) !==
+        cleanString(violation.apprehending_officer)
+      ) {
+        const err = new Error(
+          "The apprehending officer is immutable and cannot be edited.",
+        );
         (err as any).code = "ER_DUP_ENTRY";
         throw err;
       }
@@ -133,20 +163,24 @@ export const updateViolation = async (violation: TrafficViolation) => {
 
     const [driver] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM drivers WHERE license_number = ?",
-      [violation.license_number]
+      [violation.license_number],
     );
     if (driver.length === 0) {
-      const err = new Error(`Driver's license number '${violation.license_number}' does not exist in the database. Please register the driver first.`);
+      const err = new Error(
+        `Driver's license number '${violation.license_number}' does not exist in the database. Please register the driver first.`,
+      );
       (err as any).code = "ER_NO_REFERENCED_ROW_2";
       throw err;
     }
 
     const [vehicle] = await connection.query<RowDataPacket[]>(
       "SELECT * FROM vehicles WHERE plate_number = ?",
-      [violation.plate_number]
+      [violation.plate_number],
     );
     if (vehicle.length === 0) {
-      const err = new Error(`Vehicle plate number '${violation.plate_number}' does not exist in the database. Please register the vehicle first.`);
+      const err = new Error(
+        `Vehicle plate number '${violation.plate_number}' does not exist in the database. Please register the vehicle first.`,
+      );
       (err as any).code = "ER_NO_REFERENCED_ROW_2";
       throw err;
     }
@@ -166,7 +200,7 @@ export const updateViolation = async (violation: TrafficViolation) => {
       ],
     );
 
-if (result.affectedRows === 0) {
+    if (result.affectedRows === 0) {
       return null;
     }
 
@@ -220,24 +254,28 @@ export const filterViolation = async (violationFilter: ViolationFilter) => {
     max_fine_amount: "fine_amount <= ?",
   };
 
-    Object.entries(violationFilter).forEach(([key, value]) => {
-        if (value === undefined || value === null) return;
+  Object.entries(violationFilter).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
 
-        const likeFields = ["location", "violation_type", "apprehending_officer"];
+    const likeFields = ["location", "violation_type", "apprehending_officer"];
 
-        if (likeFields.includes(key)) {
-            conditions.push(`${key} LIKE ?`);
-            params.push(`%${value}%`);
-        } else {
-            conditions.push(mapping[key] || `${key} = ?`);
-            params.push(value);
-        }
-    });
+    if (likeFields.includes(key)) {
+      conditions.push(`${key} LIKE ?`);
+      params.push(`%${value}%`);
+    } else {
+      conditions.push(mapping[key] || `${key} = ?`);
+      params.push(value);
+    }
+  });
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   try {
-    const [result] = await connection.query(`SELECT * FROM traffic_violations ${where}`, params);
+    const [result] = await connection.query(
+      `SELECT * FROM traffic_violations ${where}`,
+      params,
+    );
     return result as TrafficViolation[];
   } catch (error) {
     throw error;
@@ -269,7 +307,9 @@ export const filterViolationByDriver = async (
   Object.entries(driverFilter).forEach(([key, value]) => {
     if (!value) return;
     conditions.push(mapping[key] || `d.${key} = ?`);
-    params.push(key === "address" || key === "full_name" ? `%${value}%` : value);
+    params.push(
+      key === "address" || key === "full_name" ? `%${value}%` : value,
+    );
   });
 
   if (min_date) {
@@ -285,7 +325,8 @@ export const filterViolationByDriver = async (
     params.push(`%${location}%`);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   try {
     const [result] = await connection.query(
@@ -339,7 +380,8 @@ export const filterViolationByVehicle = async (
     params.push(`%${location}%`);
   }
 
-  const vehicleWhere = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const vehicleWhere =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   try {
     const [result] = await connection.query(
@@ -361,8 +403,5 @@ export const getTypeCountByYear = async (year: number) => {
     "SELECT violation_type, COUNT(*) as count FROM traffic_violations WHERE YEAR(date) = ? GROUP BY violation_type",
     [year],
   );
-  return result as TrafficViolation[];
+  return result;
 };
-
-
-

@@ -13,13 +13,12 @@ import {
 
 const router = Router();
 
-router.get("/filter", filterViolations);
-router.get("/filter-driver", filterByDriver);
 router.get("/filter/driver", filterByDriver);
-router.get("/filter-vehicle", filterByVehicle);
 router.get("/filter/vehicle", filterByVehicle);
+router.get("/filter", filterViolations);
+router.get("/count/:year", groupTypeByYear);
 router.get("/", getAllViolations);
-router.get("/type-count-by-year", groupTypeByYear);
+router.get("/:year", groupTypeByYear);
 router.get("/:violation_id", getViolation);
 router.post("/", createViolation);
 router.delete("/:violation_id", deleteViolation);

@@ -1,24 +1,37 @@
 import { useState } from "react";
-import { FileText, Download } from "lucide-react";
+import { FileText, Download, ChevronDown, Check } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Field, FieldLabel, FieldSet } from "@/components/ui/field";
+import { api } from "@/lib/api";
+import type {
+  DriverFilter,
+  RegistrationFilter,
+  ViolationFilter,
+} from "@shared";
+import {
+  getDriverColumns,
+  getVehicleColumns,
+  getRegistrationColumns,
+  getViolationColumns,
+  getViolationTypeCountColumns,
+} from "@/components/TableColumns";
+import { DataTable } from "@/components/DataTable";
+import {
+  DriversFilterPanel,
+  VehiclesByDriverPanel,
+  ExpiredRegistrationsPanel,
+  ViolationsByDriverPanel,
+  ViolationsByTypePanel,
+  ViolationsByLocationPanel,
+} from "../../components/ReportFilterPanels";
 
 // ----- REPORT TYPE ----------------------------------------------------------------------------------------------------------------------------------------------------
 // restricts reportType to only these values
@@ -63,450 +76,24 @@ const REPORT_DESCRIPTIONS: Record<ReportType, string> = {
 };
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ----- TABLE COL ----------------------------------------------------------------------------------------------------------------------------------------------------
-// columns per filter category
-// CHANGE TO MATCH THE TABLE IN SQL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-const COLUMNS: Record<ReportType, string[]> = {
-  "Drivers by Filter": [
-    "License Number",
-    "Full Name",
-    "License Type",
-    "Status",
-    "Age",
-    "Sex",
-  ],
-  "Vehicles by Driver": [
-    "Plate Number",
-    "Make",
-    "Model",
-    "Year",
-    "Vehicle Type",
-    "Owner",
-  ],
-  "Expired Vehicle Registrations": [
-    "Plate Number",
-    "Owner Name",
-    "Expiration Date",
-    "Vehicle Type",
-  ],
-  "Expired or Suspended Licenses": [
-    "License Number",
-    "Full Name",
-    "License Type",
-    "Status",
-    "Expiry Date",
-  ],
-  "Violations by Driver": [
-    "Violation Type",
-    "Date",
-    "Location",
-    "Fine Amount",
-    "Status",
-  ],
-  "Violations by Type": ["Violation Type", "Count", "Total Fines"],
-  "Violations by Location": [
-    "Location",
-    "Violation Type",
-    "Driver Name",
-    "Date",
-    "Fine Amount",
-    "Status",
-  ],
-};
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// ----- MOCK DATA ----------------------------------------------------------------------------------------------------------------------------------------------------
-// remove everything after connecting the back end !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// generated lang ^__^ but can be filtered na in the website
-const MOCK_DATA: Record<ReportType, Record<string, any>[]> = {
-  "Drivers by Filter": [
-    {
-      "License Number": "N01-85-123456",
-      "Full Name": "Juan Dela Cruz",
-      "License Type": "Non-Professional",
-      Status: "Valid",
-      Age: 34,
-      Sex: "Male",
-    },
-    {
-      "License Number": "P02-90-789012",
-      "Full Name": "Maria Santos",
-      "License Type": "Professional",
-      Status: "Valid",
-      Age: 39,
-      Sex: "Female",
-    },
-    {
-      "License Number": "N03-78-345678",
-      "Full Name": "Roberto Reyes",
-      "License Type": "Non-Professional",
-      Status: "Expired",
-      Age: 52,
-      Sex: "Male",
-    },
-    {
-      "License Number": "P04-95-901234",
-      "Full Name": "Ana Martinez",
-      "License Type": "Professional",
-      Status: "Valid",
-      Age: 28,
-      Sex: "Female",
-    },
-  ],
-  "Vehicles by Driver": [
-    {
-      "Plate Number": "ABC 1234",
-      Make: "Toyota",
-      Model: "Vios",
-      Year: 2021,
-      "Vehicle Type": "Private Car",
-      Owner: "Juan Dela Cruz",
-    },
-    {
-      "Plate Number": "XYZ 5678",
-      Make: "Honda",
-      Model: "Click 125",
-      Year: 2020,
-      "Vehicle Type": "Motorcycle",
-      Owner: "Juan Dela Cruz",
-    },
-    {
-      "Plate Number": "DEF 9012",
-      Make: "Mitsubishi",
-      Model: "L300",
-      Year: 2019,
-      "Vehicle Type": "Utility Vehicle",
-      Owner: "Maria Santos",
-    },
-  ],
-  "Expired Vehicle Registrations": [
-    {
-      "Plate Number": "ABC 1234",
-      "Owner Name": "Juan Dela Cruz",
-      "Expiration Date": "2024-03-15",
-      "Vehicle Type": "Private Car",
-    },
-    {
-      "Plate Number": "JKL 7890",
-      "Owner Name": "Ana Martinez",
-      "Expiration Date": "2024-01-10",
-      "Vehicle Type": "Motorcycle",
-    },
-    {
-      "Plate Number": "MNO 2345",
-      "Owner Name": "Pedro Lopez",
-      "Expiration Date": "2023-12-01",
-      "Vehicle Type": "Utility Vehicle",
-    },
-  ],
-  "Expired or Suspended Licenses": [
-    {
-      "License Number": "N03-78-345678",
-      "Full Name": "Roberto Reyes",
-      "License Type": "Non-Professional",
-      Status: "Expired",
-      "Expiry Date": "2023-08-22",
-    },
-    {
-      "License Number": "P06-88-112233",
-      "Full Name": "Lito Fernandez",
-      "License Type": "Professional",
-      Status: "Suspended",
-      "Expiry Date": "2024-02-14",
-    },
-    {
-      "License Number": "N07-80-445566",
-      "Full Name": "Nena Cruz",
-      "License Type": "Non-Professional",
-      Status: "Expired",
-      "Expiry Date": "2023-05-30",
-    },
-  ],
-  "Violations by Driver": [
-    {
-      "Violation Type": "Overspeeding",
-      Date: "2024-04-15",
-      Location: "EDSA, Quezon City",
-      "Fine Amount": 1500,
-      Status: "Unpaid",
-    },
-    {
-      "Violation Type": "Illegal Parking",
-      Date: "2024-02-10",
-      Location: "BGC, Taguig",
-      "Fine Amount": 500,
-      Status: "Paid",
-    },
-    {
-      "Violation Type": "Beating Red Light",
-      Date: "2024-01-05",
-      Location: "C5, Pasig",
-      "Fine Amount": 1000,
-      Status: "Unpaid",
-    },
-  ],
-  "Violations by Type": [
-    { "Violation Type": "Overspeeding", Count: 145, "Total Fines": 217500 },
-    { "Violation Type": "Reckless Driving", Count: 87, "Total Fines": 261000 },
-    { "Violation Type": "No Helmet", Count: 203, "Total Fines": 203000 },
-    { "Violation Type": "Illegal Parking", Count: 64, "Total Fines": 32000 },
-    { "Violation Type": "Beating Red Light", Count: 51, "Total Fines": 51000 },
-  ],
-  "Violations by Location": [
-    {
-      Location: "EDSA, Quezon City",
-      "Violation Type": "Overspeeding",
-      "Driver Name": "Juan Dela Cruz",
-      Date: "2024-04-15",
-      "Fine Amount": 1500,
-      Status: "Unpaid",
-    },
-    {
-      Location: "EDSA, Quezon City",
-      "Violation Type": "Illegal Parking",
-      "Driver Name": "Rosa Garcia",
-      Date: "2024-03-10",
-      "Fine Amount": 500,
-      Status: "Paid",
-    },
-    {
-      Location: "BGC, Taguig",
-      "Violation Type": "Illegal Parking",
-      "Driver Name": "Maria Santos",
-      Date: "2024-02-10",
-      "Fine Amount": 500,
-      Status: "Paid",
-    },
-    {
-      Location: "C5, Pasig",
-      "Violation Type": "Beating Red Light",
-      "Driver Name": "Ana Martinez",
-      Date: "2024-01-05",
-      "Fine Amount": 1000,
-      Status: "Unpaid",
-    },
-  ],
+const defaultDriversFilter: DriverFilter = {
+  license_number: undefined,
+  license_type: undefined,
+  license_status: undefined,
+  min_age: undefined,
+  max_age: undefined,
+  sex: undefined,
 };
 
-// ----- EXPORT TO CSV ----------------------------------------------------------------------------------------------------------------------------------------------------
-// joins all columns to export sa csv
-// helper func!
-const toCSV = (columns: string[], rows: Record<string, any>[]): string => {
-  const header = columns.join(",");
-  const body = rows
-    .map((r) => columns.map((c) => `"${r[c] ?? ""}"`).join(","))
-    .join("\n");
-  return `${header}\n${body}`;
+const defaultRegistrationFilter: RegistrationFilter = {
+  max_date: undefined,
 };
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ----- DL CSV ----------------------------------------------------------------------------------------------------------------------------------------------------
-const downloadCSV = (content: string, filename: string) => {
-  const blob = new Blob([content], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+const defaultViolationFilter: ViolationFilter = {
+  license_number: undefined,
+  year: 0,
+  location: undefined,
 };
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// ----- STATUS ----------------------------------------------------------------------------------------------------------------------------------------------------
-// CHECK IF VALUES MATCH W/ THE BACKEND TABLE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-const getStatusClass = (value: string): string => {
-  if (value === "Paid" || value === "Valid")
-    return "bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
-  if (value === "Unpaid" || value === "Expired")
-    return "bg-red-50 text-red-600 border border-red-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
-  if (value === "Suspended")
-    return "bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
-  return "bg-slate-100 text-slate-600 border border-slate-200 rounded-full px-2 py-0.5 text-[11px] font-medium inline-block";
-};
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// dropdown helper for filter inputs -----------------------------------------
-const SelectField = ({
-  placeholder,
-  options,
-  value,
-  onChange,
-}: {
-  placeholder?: string;
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (v: string) => void;
-}) => (
-  <select
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    className="w-full border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 outline-none appearance-auto focus:border-slate-300 focus:ring-1 focus:ring-slate-300 transition-colors h-9"
-  >
-    {placeholder && <option value="">{placeholder}</option>}
-    {options.map((o) => (
-      <option key={o.value} value={o.value}>
-        {o.label}
-      </option>
-    ))}
-  </select>
-);
-
-// ----- FILTER STATE INTERFACE ----------------------------------------------------------------------------------------------------------------------------------------------------
-// DOUBLE CHEKC VALUES 1!!!!!!!!!!!!!!!!!!!!!!!!
-interface DriversFilter {
-  license_type: string;
-  license_status: string;
-  min_age: string;
-  max_age: string;
-  sex: string;
-}
-interface DateRangeFilter {
-  extra_value: string;
-  start_date: string;
-  end_date: string;
-}
-
-// driver -------------------------------------------------------------
-const DriversFilterPanel = ({
-  value,
-  onChange,
-}: {
-  value: DriversFilter;
-  onChange: (v: DriversFilter) => void;
-}) => (
-  <FieldGroup className="gap-y-4">
-    <FieldSet className="gap-y-1.5">
-      <FieldLabel>License Type</FieldLabel>
-      <Field>
-        <SelectField
-          value={value.license_type}
-          onChange={(v) => onChange({ ...value, license_type: v })}
-          placeholder="Select license type"
-          options={[
-            { value: "Non-Professional", label: "Non-Professional" },
-            { value: "Professional", label: "Professional" },
-            { value: "Student Permit", label: "Student Permit" },
-          ]}
-        />
-      </Field>
-    </FieldSet>
-    <FieldSet className="gap-y-1.5">
-      <FieldLabel>License Status</FieldLabel>
-      <Field>
-        <SelectField
-          value={value.license_status}
-          onChange={(v) => onChange({ ...value, license_status: v })}
-          placeholder="Select status"
-          options={[
-            { value: "Valid", label: "Valid" },
-            { value: "Expired", label: "Expired" },
-            { value: "Suspended", label: "Suspended" },
-            { value: "Revoked", label: "Revoked" },
-          ]}
-        />
-      </Field>
-    </FieldSet>
-    <FieldSet className="gap-y-1.5">
-      <FieldLabel>Age Range</FieldLabel>
-      <div className="flex gap-2">
-        <Field className="flex-1">
-          <Input
-            type="number"
-            placeholder="Min age"
-            value={value.min_age}
-            onChange={(e) => onChange({ ...value, min_age: e.target.value })}
-          />
-        </Field>
-        <Field className="flex-1">
-          <Input
-            type="number"
-            placeholder="Max age"
-            value={value.max_age}
-            onChange={(e) => onChange({ ...value, max_age: e.target.value })}
-          />
-        </Field>
-      </div>
-    </FieldSet>
-    <FieldSet className="gap-y-1.5">
-      <FieldLabel>Sex</FieldLabel>
-      <Field>
-        <SelectField
-          value={value.sex}
-          onChange={(v) => onChange({ ...value, sex: v })}
-          placeholder="Select sex"
-          options={[
-            { value: "Male", label: "Male" },
-            { value: "Female", label: "Female" },
-          ]}
-        />
-      </Field>
-    </FieldSet>
-  </FieldGroup>
-);
-
-// for date only filters ----------------------------------------------------
-const DateOnlyPanel = ({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) => (
-  <FieldSet className="gap-y-1.5">
-    <FieldLabel>As of Date</FieldLabel>
-    <Field>
-      <Input
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    </Field>
-  </FieldSet>
-);
-
-// for date range / start and end -----------------------------------------------------------
-const DateRangePanel = ({
-  extraLabel,
-  value,
-  onChange,
-}: {
-  extraLabel: string;
-  value: DateRangeFilter;
-  onChange: (v: DateRangeFilter) => void;
-}) => (
-  <FieldGroup className="gap-y-4">
-    <FieldSet className="gap-y-1.5">
-      <FieldLabel>{extraLabel}</FieldLabel>
-      <Field>
-        <Input
-          placeholder={`Enter ${extraLabel.toLowerCase()}`}
-          value={value.extra_value}
-          onChange={(e) => onChange({ ...value, extra_value: e.target.value })}
-        />
-      </Field>
-    </FieldSet>
-    <FieldSet className="gap-y-1.5">
-      <FieldLabel>Start Date</FieldLabel>
-      <Field>
-        <Input
-          type="date"
-          value={value.start_date}
-          onChange={(e) => onChange({ ...value, start_date: e.target.value })}
-        />
-      </Field>
-    </FieldSet>
-    <FieldSet className="gap-y-1.5">
-      <FieldLabel>End Date</FieldLabel>
-      <Field>
-        <Input
-          type="date"
-          value={value.end_date}
-          onChange={(e) => onChange({ ...value, end_date: e.target.value })}
-        />
-      </Field>
-    </FieldSet>
-  </FieldGroup>
-);
 
 // ----- MAIN PAGE ----------------------------------------------------------------------------------------------------------------------------------------------------
 const ReportsPage = () => {
@@ -514,29 +101,22 @@ const ReportsPage = () => {
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
 
-  const [driversFilter, setDriversFilter] = useState<DriversFilter>({
-    license_type: "",
-    license_status: "",
-    min_age: "",
-    max_age: "",
-    sex: "",
+  const [driverFilter, setDriverFilter] = useState<DriverFilter>({
+    license_number: undefined,
+    license_type: undefined,
+    license_status: undefined,
+    min_age: undefined,
+    max_age: undefined,
+    sex: undefined,
   });
-  const [asOfDate, setAsOfDate] = useState("");
-  const [vehicleDriver, setVehicleDriver] = useState("");
-  const [violByDriver, setViolByDriver] = useState<DateRangeFilter>({
-    extra_value: "",
-    start_date: "",
-    end_date: "",
-  });
-  const [violByType, setViolByType] = useState<DateRangeFilter>({
-    extra_value: "",
-    start_date: "",
-    end_date: "",
-  });
-  const [violByLoc, setViolByLoc] = useState<DateRangeFilter>({
-    extra_value: "",
-    start_date: "",
-    end_date: "",
+  const [registrationFilter, setRegistrationFilter] =
+    useState<RegistrationFilter>({
+      max_date: undefined,
+    });
+  const [violationFilter, setViolationFilter] = useState<ViolationFilter>({
+    license_number: undefined,
+    year: 0,
+    location: undefined,
   });
 
   const handleSelectReport = (r: ReportType) => {
@@ -546,38 +126,125 @@ const ReportsPage = () => {
   };
 
   // CHANGE THIS ------------------------------------------------------
-  const handleGenerate = () => {
-    let data = MOCK_DATA[reportType];
+  const handleGenerate = async () => {
+    let data = [];
 
     switch (reportType) {
       // DRIVERS BY FILTER
       // ----------------------------------------------------------------------------------------------------
-      case "Drivers by Filter":
+      case "Drivers by Filter": {
+        const params = new URLSearchParams();
+        setDriverFilter(defaultDriversFilter);
+        if (driverFilter.license_type) {
+          params.append("license_type", driverFilter.license_type);
+        }
+        if (driverFilter.license_status) {
+          params.append("license_status", driverFilter.license_status);
+        }
+        if (driverFilter.min_age) {
+          params.append("min_age", driverFilter.min_age.toString());
+        }
+        if (driverFilter.max_age) {
+          params.append("max_age", driverFilter.max_age.toString());
+        }
+        if (driverFilter.sex) {
+          params.append("sex", driverFilter.sex);
+        }
+        const response = await api(`/drivers/filter?${params}`);
+        if (response.ok) {
+          const filterRes = await response.json();
+          data = filterRes.data;
+        }
         break;
-      // ----------------------------------------------------------------------------------------------------
+      }
 
-      // VEHICLES BY DRIVER
-      // ----------------------------------------------------------------------------------------------------
-      case "Vehicles by Driver":
+      case "Vehicles by Driver": {
+        const params = new URLSearchParams();
+        setDriverFilter(defaultDriversFilter);
+        if (driverFilter.license_number) {
+          params.append("license_number", driverFilter.license_number);
+        }
+        const response = await api(`vehicles/filter/driver?${params}`);
+        if (response.ok) {
+          const filterRes = await response.json();
+          data = filterRes.data;
+        }
         break;
-      // ----------------------------------------------------------------------------------------------------
+      }
+
+      case "Expired Vehicle Registrations": {
+        const params = new URLSearchParams();
+        setRegistrationFilter(defaultRegistrationFilter);
+        if (registrationFilter.max_date) {
+          params.append("max_date", registrationFilter.max_date as string);
+        }
+        const response = await api(`registrations/expired?${params}`);
+        if (response.ok) {
+          const filterRes = await response.json();
+          data = filterRes.data;
+        }
+        break;
+      }
+
+      case "Expired or Suspended Licenses": {
+        const response = await api(
+          `drivers/filter?license_status=Expired,Suspended`,
+        );
+        if (response.ok) {
+          const filterRes = await response.json();
+          data = filterRes.data || [];
+        }
+        break;
+      }
 
       // VIOLATIONS BY DRIVER
       // // ----------------------------------------------------------------------------------------------------
-      case "Violations by Driver":
+      case "Violations by Driver": {
+        const params = new URLSearchParams();
+        setViolationFilter(defaultViolationFilter);
+        if (violationFilter.license_number) {
+          params.append("license_number", violationFilter.license_number);
+        }
+
+        const response = await api(`violations/filter/driver?${params}`);
+        if (response.ok) {
+          const filterRes = await response.json();
+          console.log(filterRes);
+          data = filterRes.data;
+        }
         break;
+      }
       // // ----------------------------------------------------------------------------------------------------
 
       // VIOLATIONS BY TYPE
       // ----------------------------------------------------------------------------------------------------
-      case "Violations by Type":
+      case "Violations by Type": {
+        if (!violationFilter.year) break;
+
+        const response = await api(`violations/count/${violationFilter.year}`);
+        if (response.ok) {
+          const filterRes = await response.json();
+          data = filterRes.data;
+        }
         break;
+      }
+
       // ----------------------------------------------------------------------------------------------------
 
       // VIOLATIONS BY LOC
       // ----------------------------------------------------------------------------------------------------
-      case "Violations by Location":
+      case "Violations by Location": {
+        const params = new URLSearchParams();
+        if (violationFilter.location) {
+          params.append("location", violationFilter.location);
+        }
+        const response = await api(`violations/filter?${params}`);
+        if (response.ok) {
+          const filterRes = await response.json();
+          data = filterRes.data;
+        }
         break;
+      }
       // ----------------------------------------------------------------------------------------------------
     }
     setRows(data);
@@ -588,102 +255,97 @@ const ReportsPage = () => {
   };
 
   // handles the csv export button
-  const handleExportCSV = () => {
-    if (rows.length === 0) {
-      toast.info("No data to export.");
-      return;
-    }
-    downloadCSV(
-      toCSV(COLUMNS[reportType], rows),
-      `${reportType.replace(/\s+/g, "_")}_report.csv`,
-    );
-    toast.success("CSV exported");
-  };
+  const handleExportCSV = () => {};
 
   // switch functions to det which ui controls to show in the screen
   const renderFilterPanel = () => {
     switch (reportType) {
-      // -----------------------------------------
       case "Drivers by Filter":
         return (
-          <DriversFilterPanel
-            value={driversFilter}
-            onChange={setDriversFilter}
-          />
+          <DriversFilterPanel value={driverFilter} onChange={setDriverFilter} />
         );
-      // -----------------------------------------
-      // -----------------------------------------
       case "Vehicles by Driver":
         return (
-          <FieldSet className="gap-y-1.5">
-            <FieldLabel>Driver Name</FieldLabel>
-            <Field>
-              <Input
-                placeholder="Enter driver name"
-                value={vehicleDriver}
-                onChange={(e) => setVehicleDriver(e.target.value)}
-              />
-            </Field>
-          </FieldSet>
-        );
-      // -----------------------------------------
-      // -----------------------------------------
-      case "Expired Vehicle Registrations":
-      // -----------------------------------------
-      // -----------------------------------------
-      case "Expired or Suspended Licenses":
-        return <DateOnlyPanel value={asOfDate} onChange={setAsOfDate} />;
-      // -----------------------------------------
-      // -----------------------------------------
-      case "Violations by Driver":
-        return (
-          <DateRangePanel
-            extraLabel="Driver Name"
-            value={violByDriver}
-            onChange={setViolByDriver}
+          <VehiclesByDriverPanel
+            value={driverFilter}
+            onChange={setDriverFilter}
           />
         );
-      // -----------------------------------------
-      // -----------------------------------------
+      case "Expired Vehicle Registrations":
+        return (
+          <ExpiredRegistrationsPanel
+            value={registrationFilter}
+            onChange={setRegistrationFilter}
+          />
+        );
+      case "Expired or Suspended Licenses":
+        return null;
+      case "Violations by Driver":
+        return (
+          <ViolationsByDriverPanel
+            value={violationFilter}
+            onChange={setViolationFilter}
+          />
+        );
       case "Violations by Type":
         return (
-          <FieldSet className="gap-y-1.5">
-            <FieldLabel>Year</FieldLabel>
-            <Field>
-              <Input
-                type="number"
-                placeholder="e.g. 2024"
-                value={violByType.start_date}
-                onChange={(e) =>
-                  setViolByType((p) => ({ ...p, start_date: e.target.value }))
-                }
-              />
-            </Field>
-          </FieldSet>
+          <ViolationsByTypePanel
+            value={violationFilter}
+            onChange={setViolationFilter}
+          />
         );
-      // -----------------------------------------
-      // -----------------------------------------
       case "Violations by Location":
         return (
-          <FieldSet className="gap-y-1.5">
-            <FieldLabel>City / Region</FieldLabel>
-            <Field>
-              <Input
-                placeholder="Enter city or region"
-                value={violByLoc.extra_value}
-                onChange={(e) =>
-                  setViolByLoc((p) => ({ ...p, extra_value: e.target.value }))
-                }
-              />
-            </Field>
-          </FieldSet>
+          <ViolationsByLocationPanel
+            value={violationFilter}
+            onChange={setViolationFilter}
+          />
         );
-      // -----------------------------------------
     }
   };
 
-  // get headers based on the selected filter
-  const columns = COLUMNS[reportType];
+  const getTableConfig = () => {
+    if (reportType === "Vehicles by Driver") {
+      return {
+        columns: getVehicleColumns(undefined as any, undefined as any).filter(
+          (c) => c.id !== "actions",
+        ),
+        title: "Vehicles",
+      };
+    }
+    if (reportType === "Expired Vehicle Registrations") {
+      return {
+        columns: getRegistrationColumns(
+          undefined as any,
+          undefined as any,
+        ).filter((c) => c.id !== "actions"),
+        title: "Vehicle Registrations",
+      };
+    }
+    if (reportType === "Violations by Type") {
+      return {
+        columns: getViolationTypeCountColumns(),
+        title: "Violations by Type",
+      };
+    }
+    if (
+      reportType === "Violations by Driver" ||
+      reportType === "Violations by Location"
+    ) {
+      return {
+        columns: getViolationColumns(undefined as any, undefined as any).filter(
+          (c) => c.id !== "actions",
+        ),
+        title: "Traffic Violations",
+      };
+    }
+    return {
+      columns: getDriverColumns() as any,
+      title: "Drivers",
+    };
+  };
+
+  const { columns, title } = getTableConfig();
 
   return (
     <div className="w-full p-6 flex flex-col gap-6">
@@ -709,17 +371,7 @@ const ReportsPage = () => {
                       className="w-full flex items-center justify-between border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 cursor-pointer font-normal h-9 hover:bg-slate-100"
                     >
                       <span>{reportType}</span>
-                      <svg
-                        className="w-4 h-4 text-slate-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-80 overflow-y-auto">
@@ -735,17 +387,7 @@ const ReportsPage = () => {
                       >
                         <span>{r}</span>
                         {r === reportType && (
-                          <svg
-                            className="w-3.5 h-3.5 text-indigo-600"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
+                          <Check className="w-3.5 h-3.5 text-indigo-600" />
                         )}
                       </DropdownMenuItem>
                     ))}
@@ -790,44 +432,7 @@ const ReportsPage = () => {
 
       {/* results table */}
       {rows.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead
-                    key={col}
-                    className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500"
-                  >
-                    {col}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row, i) => (
-                <TableRow key={i}>
-                  {columns.map((col) => (
-                    <TableCell key={col} className="px-4 py-2.5 text-slate-700">
-                      {col === "Status" ? (
-                        <span
-                          className={getStatusClass(String(row[col] ?? ""))}
-                        >
-                          {row[col]}
-                        </span>
-                      ) : (
-                        (row[col] ?? "—")
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="border-t border-slate-100 px-4 py-1.5 text-[11px] text-slate-400">
-            {rows.length} record{rows.length !== 1 ? "s" : ""} found
-          </div>
-        </div>
+        <DataTable columns={columns} data={rows} title={title} />
       )}
 
       {/* empty state */}

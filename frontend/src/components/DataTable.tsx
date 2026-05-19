@@ -26,8 +26,8 @@ interface DataTableProps<TData> {
   onAddNewClick?: () => void;
 }
 
-export function DataTable<TData>({ 
-  columns, 
+export function DataTable<TData>({
+  columns,
   data,
   title,
   onFilterClick,
@@ -50,23 +50,26 @@ export function DataTable<TData>({
             </h2>
           )}
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-          <Button 
-            variant="outline" 
-            className="bg-white gap-2 text-slate-700 rounded-lg"
-            onClick={onFilterClick}
-          >
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-          <Button 
-            className="gap-2 rounded-lg"
-            onClick={onAddNewClick}
-          >
-            <Plus className="h-4 w-4" />
-            Add New
-          </Button>
-        </div>
+        {(onFilterClick || onAddNewClick) && (
+          <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+            {onFilterClick && (
+              <Button
+                variant="outline"
+                className="bg-white gap-2 text-slate-700 rounded-lg"
+                onClick={onFilterClick}
+              >
+                <Filter className="h-4 w-4" />
+                Filter
+              </Button>
+            )}
+            {onAddNewClick && (
+              <Button className="gap-2 rounded-lg" onClick={onAddNewClick}>
+                <Plus className="h-4 w-4" />
+                Add New
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       <div className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
         <Table>

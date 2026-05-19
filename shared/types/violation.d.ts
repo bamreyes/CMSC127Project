@@ -25,6 +25,7 @@ export interface ViolationFilter {
   violation_type?: string | null;
   license_number?: string | null;
   plate_number?: string | null;
+  year?: number | null;
 }
 
 export interface ViolationFormData {
@@ -53,3 +54,7 @@ export interface ViolationFilterData {
   violation_status_contested: boolean;
 }
 
+export type ViolationTypeCount = {
+  violation_type: string;
+  count: number;
+};

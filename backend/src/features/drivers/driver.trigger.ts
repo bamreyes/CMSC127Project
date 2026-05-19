@@ -20,7 +20,7 @@ export async function setupDriverTrigger() {
                                     IF unpaid_count > 0 THEN
                                         SET NEW.license_status = 'Suspended';
                                     ELSE
-                                        SET NEW.license_status = 'Active';
+                                        SET NEW.license_status = 'Valid';
                                     END IF;
                                END IF;
                            END;`);
@@ -43,7 +43,7 @@ export async function setupDriverTrigger() {
                                     IF unpaid_count > 0 THEN
                                         SET NEW.license_status = 'Suspended';
                                     ELSE
-                                        SET NEW.license_status = 'Active';
+                                        SET NEW.license_status = 'Valid';
                                     END IF;
                                END IF;
                            END;`);

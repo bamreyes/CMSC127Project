@@ -1,18 +1,13 @@
 import { Request, Response } from "express";
 import * as DriverService from "@/features/drivers/driver.service";
 import { Driver } from "@shared";
-import {
-  LicenseType,
-  LicenseStatus,
-  Sex,
-  DriverFilter,
-} from "@shared";
+import { LicenseType, LicenseStatus, Sex, DriverFilter } from "@shared";
 
 // GET /api/drivers
 export const getAllDrivers = async (req: Request, res: Response) => {
   try {
     const result = await DriverService.getAllDrivers();
-res.status(200).send({ success: true, data: result });
+    res.status(200).send({ success: true, data: result });
   } catch (error) {
     res.status(500).send({ success: false, message: "An error occured" });
   }
@@ -37,7 +32,7 @@ export const getDriver = async (req: Request, res: Response) => {
 
   try {
     const result = await DriverService.getDriver(license_number as string);
-if (!result) {
+    if (!result) {
       return res
         .status(404)
         .send({ success: false, message: "Driver not found" });
@@ -113,7 +108,7 @@ export const createDriver = async (req: Request, res: Response) => {
       issued_at,
       expires_at,
     } as Driver);
-res.status(200).send({
+    res.status(200).send({
       success: true,
       message: "Driver created successfully",
       data: result,
@@ -207,7 +202,7 @@ export const updateDriver = async (req: Request, res: Response) => {
       issued_at,
       expires_at,
     } as Driver);
-if (!result) {
+    if (!result) {
       return res
         .status(404)
         .send({ success: false, message: "Driver not found" });
@@ -219,7 +214,10 @@ if (!result) {
       data: result,
     });
   } catch (error: any) {
-    if (error.code === "ER_ROW_IS_REFERENCED" || error.code === "ER_DUP_ENTRY") {
+    if (
+      error.code === "ER_ROW_IS_REFERENCED" ||
+      error.code === "ER_DUP_ENTRY"
+    ) {
       return res.status(409).send({ success: false, message: error.message });
     }
     res.status(500).send({ success: false, message: "An error occured" });
@@ -245,7 +243,7 @@ export const deleteDriver = async (req: Request, res: Response) => {
 
   try {
     const result = await DriverService.deleteDriver(license_number as string);
-if (!result) {
+    if (!result) {
       return res
         .status(404)
         .send({ success: false, message: "Driver not found" });
@@ -266,24 +264,65 @@ if (!result) {
 
 // GET /api/drivers/filter/
 export const filterDrivers = async (req: Request, res: Response) => {
-  const { license_type, license_status, min_bdate, max_bdate, sex, address,
-          license_number, full_name } = req.query;
+  const {
+    license_type,
+    license_status,
+    min_bdate,
+    max_bdate,
+    sex,
+    address,
+    license_number,
+    full_name,
+    min_age,
+    max_age,
+  } = req.query;
 
   if (min_bdate || max_bdate) {
     const minD = min_bdate ? new Date(min_bdate as string) : null;
     const maxD = max_bdate ? new Date(max_bdate as string) : null;
 
-    if ((min_bdate && isNaN(minD!.getTime())) || (max_bdate && isNaN(maxD!.getTime()))) {
+    if (
+      (min_bdate && isNaN(minD!.getTime())) ||
+      (max_bdate && isNaN(maxD!.getTime()))
+    ) {
       return res.status(400).send({
         success: false,
         message: "Dates must be in a valid format (YYYY-MM-DD)",
       });
     }
-
     if (minD && maxD && minD > maxD) {
       return res.status(400).send({
         success: false,
         message: "Minimum date cannot be after maximum date",
+      });
+    }
+  }
+
+  if (min_age) {
+    const minAgeNum = parseInt(min_age as string, 10);
+    if (isNaN(minAgeNum) || minAgeNum < 0) {
+      return res.status(400).send({
+        success: false,
+        message: "Minimum age must be a non-negative number",
+      });
+    }
+  }
+  if (max_age) {
+    const maxAgeNum = parseInt(max_age as string, 10);
+    if (isNaN(maxAgeNum) || maxAgeNum < 0) {
+      return res.status(400).send({
+        success: false,
+        message: "Maximum age must be a non-negative number",
+      });
+    }
+  }
+  if (min_age && max_age) {
+    const minAgeNum = parseInt(min_age as string, 10);
+    const maxAgeNum = parseInt(max_age as string, 10);
+    if (minAgeNum > maxAgeNum) {
+      return res.status(400).send({
+        success: false,
+        message: "Minimum age cannot be greater than maximum age",
       });
     }
   }
@@ -296,8 +335,10 @@ export const filterDrivers = async (req: Request, res: Response) => {
       min_bdate: min_bdate ? new Date(min_bdate as string) : null,
       max_bdate: max_bdate ? new Date(max_bdate as string) : null,
       address: (address as string) ?? null,
-      license_number: (license_number as string) ?? null, 
-      full_name: (full_name as string) ?? null
+      license_number: (license_number as string) ?? null,
+      full_name: (full_name as string) ?? null,
+      min_age: min_age ? parseInt(min_age as string, 10) : null,
+      max_age: max_age ? parseInt(max_age as string, 10) : null,
     });
 
     res.status(200).send({
@@ -309,4 +350,3 @@ export const filterDrivers = async (req: Request, res: Response) => {
     res.status(500).send({ success: false, message: "An error occured" });
   }
 };
-

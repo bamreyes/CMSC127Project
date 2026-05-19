@@ -1,4 +1,7 @@
-export type LicenseType = "Student Permit" | "Non-Professional" | "Professional";
+export type LicenseType =
+  | "Student Permit"
+  | "Non-Professional"
+  | "Professional";
 export type LicenseStatus = "Valid" | "Expired" | "Suspended" | "Revoked";
 export type Sex = "M" | "F";
 
@@ -36,6 +39,8 @@ export interface DriverFilter {
   color?: string | null;
   min_year?: number | null;
   max_year?: number | null;
+  min_age?: number | null;
+  max_age?: number | null;
 }
 
 export interface DriverFormData {
@@ -70,4 +75,3 @@ export interface DriverFilterData {
   expires_at_min: Date | undefined;
   expires_at_max: Date | undefined;
 }
-

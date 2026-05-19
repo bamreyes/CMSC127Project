@@ -23,7 +23,7 @@ export const syncDriverStatuses = async (connection: any) => {
   // Activate all drivers who are suspended, but have no unpaid violations that are more than 15 days old and are unexpired
   await connection.query(
     `UPDATE drivers d
-     SET d.license_status = 'Active'
+     SET d.license_status = 'Valid'
      WHERE d.expires_at > CURDATE()
        AND d.license_status = 'Suspended'
        AND (SELECT COUNT(*) FROM traffic_violations tv 
@@ -207,6 +207,8 @@ export const filterDriver = async ({
   address,
   license_number,
   full_name,
+  min_age,
+  max_age,
 }: DriverFilter) => {
   const connection = await pool.getConnection();
   try {
@@ -218,8 +220,15 @@ export const filterDriver = async ({
       params.push(license_type);
     }
     if (license_status) {
-      conditions.push("license_status = ?");
-      params.push(license_status);
+      if (license_status.includes(",")) {
+        const statuses = license_status.split(",");
+        const placeholders = statuses.map(() => "?").join(", ");
+        conditions.push(`license_status IN (${placeholders})`);
+        params.push(...statuses);
+      } else {
+        conditions.push("license_status = ?");
+        params.push(license_status);
+      }
     }
     if (min_bdate) {
       conditions.push("date_of_birth >= ?");
@@ -244,6 +253,18 @@ export const filterDriver = async ({
     if (full_name) {
       conditions.push("full_name LIKE ?");
       params.push(`%${full_name}%`);
+    }
+    if (min_age) {
+      const today = new Date();
+      const maxBdate = new Date(today.getFullYear() - min_age, today.getMonth(), today.getDate());
+      conditions.push("date_of_birth <= ?");
+      params.push(maxBdate);
+    }
+    if (max_age) {
+      const today = new Date();
+      const minBdate = new Date(today.getFullYear() - max_age - 1, today.getMonth(), today.getDate() + 1);
+      conditions.push("date_of_birth >= ?");
+      params.push(minBdate);
     }
 
     const where =
