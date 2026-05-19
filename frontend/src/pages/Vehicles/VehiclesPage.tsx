@@ -12,6 +12,7 @@ import { EditVehicleModal } from "@/components/modals/EditModal";
 const VehiclesPage = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFiltered, setIsFiltered] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{
@@ -37,21 +38,10 @@ const VehiclesPage = () => {
 
   const fetchVehicles = useCallback(async () => {
     try {
-      const [vehRes, drvRes] = await Promise.all([
-        api("/vehicles"),
-        api("/drivers"),
-      ]);
-      if (vehRes.ok && drvRes.ok) {
+      const vehRes = await api("/vehicles");
+      if (vehRes.ok) {
         const vehResult = await vehRes.json();
-        const drvResult = await drvRes.json();
-        const drivers = drvResult.data || [];
-        const mapped = (vehResult.data || []).map((v: any) => ({
-          ...v,
-          owner_name: drivers.find(
-            (d: any) => d.license_number === v.license_number,
-          )?.full_name,
-        }));
-        setVehicles(mapped);
+        setVehicles(vehResult.data || []);
       }
     } catch (error) {
       console.error("Failed to fetch vehicles:", error);
@@ -64,72 +54,71 @@ const VehiclesPage = () => {
     fetchVehicles();
   }, [fetchVehicles]);
 
-  const handleDeleteClick = async (plate_number: string) => {
+  const handleDeleteClick = (plate_number: string) => {
     try {
-      const regsResponse = await api(`/registrations/plate/${plate_number}`);
-      const violationsResponse = await api(
-        `/violations/filter/vehicle?plate_number=${plate_number}`,
+      const vehicle = vehicles.find(
+        (v) => v.plate_number?.toUpperCase() === plate_number.toUpperCase(),
       );
+      if (!vehicle) {
+        throw new Error("Vehicle not found in state");
+      }
+
+      const regs = vehicle.registrations || [];
+      const violationsList = vehicle.violations || [];
+
       let warningMessage = null;
       let affectedItems: string[] = [];
       let disableConfirm = false;
       let activeItemsList: string[] = [];
       let expiredItemsList: string[] = [];
 
-      if (regsResponse.ok) {
-        const regsData = await regsResponse.json();
-        const regs = regsData.data || [];
+      const regsList = Array.isArray(regs)
+        ? regs
+        : (regs as any).registration_number
+          ? [regs]
+          : [];
 
-        const regsList = Array.isArray(regs)
-          ? regs
-          : regs.registration_number
-            ? [regs]
-            : [];
+      const activeRegs = regsList.filter((r: any) => {
+        const isStatusActive = r.registration_status === "Active";
+        const isNotExpired = new Date(r.expiration_date) > new Date();
+        return isStatusActive && isNotExpired;
+      });
 
-        const activeRegs = regsList.filter((r: any) => {
-          const isStatusActive = r.registration_status === "Active";
-          const isNotExpired = new Date(r.expiration_date) > new Date();
-          return isStatusActive && isNotExpired;
-        });
+      const expiredRegs = regsList.filter((r: any) => {
+        const isStatusActive = r.registration_status === "Active";
+        const isNotExpired = new Date(r.expiration_date) > new Date();
+        return !isStatusActive || !isNotExpired;
+      });
 
-        const expiredRegs = regsList.filter((r: any) => {
-          const isStatusActive = r.registration_status === "Active";
-          const isNotExpired = new Date(r.expiration_date) > new Date();
-          return !isStatusActive || !isNotExpired;
-        });
-
-        if (activeRegs.length > 0) {
-          activeRegs.forEach((r: any) =>
-            activeItemsList.push(
-              `Active Registration No: ${r.registration_number} (Expires: ${new Date(r.expiration_date).toISOString().slice(0, 10)})`,
-            ),
-          );
-          disableConfirm = true;
-        }
-
-        if (expiredRegs.length > 0) {
-          expiredRegs.forEach((r: any) =>
-            expiredItemsList.push(
-              `Expired Registration No: ${r.registration_number} (Expired: ${new Date(r.expiration_date).toISOString().slice(0, 10)})`,
-            ),
-          );
-        }
+      if (activeRegs.length > 0) {
+        activeRegs.forEach((r: any) =>
+          activeItemsList.push(
+            `Active Registration No: ${r.registration_number} (Expires: ${new Date(r.expiration_date).toISOString().slice(0, 10)})`,
+          ),
+        );
+        disableConfirm = true;
       }
 
-      if (violationsResponse.ok) {
-        const violationsData = await violationsResponse.json();
-        const allViolations = violationsData.data || [];
-        const violations = allViolations.filter((v: any) => v.violation_status !== "Paid");
-        const violationsCount = violations.length;
+      if (expiredRegs.length > 0) {
+        expiredRegs.forEach((r: any) =>
+          expiredItemsList.push(
+            `Expired Registration No: ${r.registration_number} (Expired: ${new Date(r.expiration_date).toISOString().slice(0, 10)})`,
+          ),
+        );
+      }
 
-        if (violationsCount > 0) {
-          violations.forEach((v: any) =>
-            activeItemsList.push(
-              `Violation ID ${v.violation_id}: ${v.violation_type} (${v.violation_status})`,
-            ),
-          );
-          disableConfirm = true;
-        }
+      const outstandingViolations = violationsList.filter(
+        (v: any) => v.violation_status !== "Paid",
+      );
+      const violationsCount = outstandingViolations.length;
+
+      if (violationsCount > 0) {
+        outstandingViolations.forEach((v: any) =>
+          activeItemsList.push(
+            `Violation ID ${v.violation_id}: ${v.violation_type} (${v.violation_status})`,
+          ),
+        );
+        disableConfirm = true;
       }
 
       if (disableConfirm) {
@@ -175,14 +164,12 @@ const VehiclesPage = () => {
         throw new Error(errorData.message || `Error: ${response.statusText}`);
       }
       toast.success("Vehicle deleted successfully");
+      setIsFiltered(false);
       await fetchVehicles();
     } catch (error) {
-      toast.error("Failed to delete vehicle", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete vehicle",
+      );
     }
   };
 
@@ -199,6 +186,7 @@ const VehiclesPage = () => {
           )}
           data={vehicles}
           title="Vehicles"
+          isFiltered={isFiltered}
           onFilterClick={() => setFilterModalOpen(true)}
           onAddNewClick={() => setCreateModalOpen(true)}
         />
@@ -218,20 +206,33 @@ const VehiclesPage = () => {
       <FilterVehicleModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onResults={(filtered) => setVehicles(filtered)}
+        onResults={(filtered) => {
+          setVehicles(filtered);
+          setIsFiltered(true);
+        }}
+        onReset={() => {
+          setIsFiltered(false);
+          fetchVehicles();
+        }}
       />
 
       <CreateVehicleModal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onSuccess={fetchVehicles}
+        onSuccess={() => {
+          setIsFiltered(false);
+          fetchVehicles();
+        }}
       />
 
       {editModal.vehicle && (
         <EditVehicleModal
           isOpen={editModal.isOpen}
           onClose={() => setEditModal({ isOpen: false, vehicle: null })}
-          onSuccess={fetchVehicles}
+          onSuccess={() => {
+            setIsFiltered(false);
+            fetchVehicles();
+          }}
           vehicle={editModal.vehicle}
         />
       )}

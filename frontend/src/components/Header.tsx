@@ -1,4 +1,4 @@
-import { Car } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { cn } from "@/lib/utils";
 import { NavLink } from "react-router-dom";
 
@@ -26,15 +26,19 @@ const Header = () => {
           to="/"
           className="flex items-center gap-4 hover:opacity-80 transition-opacity"
         >
-          <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl shadow-lg shadow-blue-100">
-            <Car className="text-white w-7 h-7" />
+          <div className="flex items-center justify-center w-12 h-12 overflow-hidden rounded-xl bg-slate-50 border border-slate-150">
+            <img
+              src={logo}
+              alt="LTO Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <h1 className="text-xl font-semibold text-slate-900 tracking-tight leading-tight">
-              LTO Information Management System
+              LTO Database Management System
             </h1>
-            <p className="text-sm font-medium text-slate-500">
-              Land Transportation Office - Philippines
+            <p className="text-sm font-semibold text-blue-800">
+              Department of Transportation
             </p>
           </div>
         </NavLink>
@@ -50,7 +54,7 @@ const Header = () => {
                     "flex items-center justify-center rounded-lg text-sm font-bold outline-none whitespace-nowrap overflow-hidden transition-all duration-300 ease-in-out",
                     isActive
                       ? "bg-white text-blue-600 border border-slate-200 ring-1 ring-slate-50 px-4 py-2.5 max-w-[200px] mx-0.5 opacity-100"
-                      : "border border-transparent text-slate-500 hover:text-slate-900 hover:bg-white/50 px-0 py-2.5 max-w-0 mx-0 opacity-0 group-hover:max-w-[200px] group-hover:px-4 group-hover:mx-0.5 group-hover:opacity-100"
+                      : "border border-transparent text-slate-500 hover:text-slate-900 hover:bg-white/50 px-0 py-2.5 max-w-0 mx-0 opacity-0 group-hover:max-w-[200px] group-hover:px-4 group-hover:mx-0.5 group-hover:opacity-100",
                   )
                 }
               >

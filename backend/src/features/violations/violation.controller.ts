@@ -9,8 +9,8 @@ export const getAllViolations = async (req: Request, res: Response) => {
   try {
     const result = await ViolationService.getAllViolations();
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -41,8 +41,8 @@ export const getViolation = async (req: Request, res: Response) => {
     }
 
     res.status(201).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -119,7 +119,7 @@ export const createViolation = async (req: Request, res: Response) => {
 
     res
       .status(500)
-      .send({ success: false, message: "An error occured", error });
+      .send({ success: false, message: error.message || "An error occurred.", error });
   }
 };
 
@@ -153,8 +153,8 @@ export const deleteViolation = async (req: Request, res: Response) => {
       message: "Violation successfully deleted",
       deleted_id: result,
     });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -243,7 +243,7 @@ export const updateViolation = async (req: Request, res: Response) => {
           "The referenced driver's license number or vehicle plate number does not exist.",
       });
     }
-    res.status(500).send({ success: false, message: "An error occured" });
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -299,8 +299,8 @@ export const filterViolations = async (req: Request, res: Response) => {
       message: `Found ${result.length} record(s)`,
       data: result,
     });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -385,10 +385,10 @@ export const filterByDriver = async (req: Request, res: Response) => {
       message: `Found ${result.length} record(s)`,
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
     res
       .status(500)
-      .send({ success: false, message: "An error occurred", error });
+      .send({ success: false, message: error.message || "An error occurred", error });
   }
 };
 
@@ -459,8 +459,8 @@ export const filterByVehicle = async (req: Request, res: Response) => {
       message: `Found ${result.length} record(s)`,
       data: result,
     });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred" });
   }
 };
 
@@ -486,7 +486,7 @@ export const groupTypeByYear = async (req: Request, res: Response) => {
   try {
     const result = await ViolationService.getTypeCountByYear(parsed);
     res.status(200).json({ success: true, data: result });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server error" });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 };

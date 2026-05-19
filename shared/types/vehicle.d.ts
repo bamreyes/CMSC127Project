@@ -1,3 +1,6 @@
+import { VehicleRegistration } from "./registration";
+import { TrafficViolation } from "./violation";
+
 export type VehicleType = "Motorcycle" | "Private Car" | "Public Utility Vehicle";
 
 export interface Vehicle {
@@ -11,6 +14,8 @@ export interface Vehicle {
   color: string;
   license_number: string; // References to driver
   owner_name?: string; // Fetched via JOIN
+  registrations?: VehicleRegistration[];
+  violations?: TrafficViolation[];
 }
 
 export interface VehicleFilter {

@@ -12,6 +12,7 @@ import { EditDriverModal } from "@/components/modals/EditModal";
 const DriversPage = () => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFiltered, setIsFiltered] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
@@ -87,7 +88,9 @@ const DriversPage = () => {
       if (violationsResponse.ok) {
         const violationsData = await violationsResponse.json();
         const allViolations = violationsData.data || [];
-        const violations = allViolations.filter((v: any) => v.violation_status !== "Paid");
+        const violations = allViolations.filter(
+          (v: any) => v.violation_status !== "Paid",
+        );
         const violationsCount = violations.length;
 
         if (violationsCount > 0) {
@@ -140,15 +143,12 @@ const DriversPage = () => {
       }
 
       toast.success("Driver deleted successfully");
-
+      setIsFiltered(false);
       await fetchDrivers();
     } catch (error) {
-      toast.error("Failed to delete driver", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete driver",
+      );
     }
   };
 
@@ -163,6 +163,7 @@ const DriversPage = () => {
           columns={getDriverColumns(handleDeleteClick, handleEditClick)}
           data={drivers}
           title="Drivers"
+          isFiltered={isFiltered}
           onFilterClick={() => setFilterModalOpen(true)}
           onAddNewClick={() => setCreateModalOpen(true)}
         />
@@ -182,20 +183,33 @@ const DriversPage = () => {
       <FilterDriverModal
         isOpen={filterModalOpen}
         onClose={() => setFilterModalOpen(false)}
-        onResults={(filtered) => setDrivers(filtered)}
+        onResults={(filtered) => {
+          setDrivers(filtered);
+          setIsFiltered(true);
+        }}
+        onReset={() => {
+          setIsFiltered(false);
+          fetchDrivers();
+        }}
       />
 
       <CreateDriverModal
         isOpen={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onSuccess={fetchDrivers}
+        onSuccess={() => {
+          setIsFiltered(false);
+          fetchDrivers();
+        }}
       />
 
       {editModal.driver && (
         <EditDriverModal
           isOpen={editModal.isOpen}
           onClose={() => setEditModal({ isOpen: false, driver: null })}
-          onSuccess={fetchDrivers}
+          onSuccess={() => {
+            setIsFiltered(false);
+            fetchDrivers();
+          }}
           driver={editModal.driver}
         />
       )}

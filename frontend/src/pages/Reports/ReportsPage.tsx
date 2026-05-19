@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Download, ChevronDown, Check } from "lucide-react";
+import { FileText, Download, Filter, ChevronDown, Check } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldLabel, FieldSet } from "@/components/ui/field";
 import { api } from "@/lib/api";
 import type {
   DriverFilter,
@@ -24,6 +23,7 @@ import {
   getViolationTypeCountColumns,
 } from "@/components/TableColumns";
 import { DataTable } from "@/components/DataTable";
+import BaseModal from "@/components/modals/BaseModal";
 import {
   DriversFilterPanel,
   VehiclesByDriverPanel,
@@ -33,8 +33,7 @@ import {
   ViolationsByLocationPanel,
 } from "../../components/ReportFilterPanels";
 
-// ----- REPORT TYPE ----------------------------------------------------------------------------------------------------------------------------------------------------
-// restricts reportType to only these values
+// ----- REPORT TYPE -----
 type ReportType =
   | "Drivers by Filter"
   | "Vehicles by Driver"
@@ -43,10 +42,7 @@ type ReportType =
   | "Violations by Driver"
   | "Violations by Type"
   | "Violations by Location";
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ----- DROPDOWN VAL ----------------------------------------------------------------------------------------------------------------------------------------------------
-// list of values in the dropdown
 const REPORT_TYPES: ReportType[] = [
   "Drivers by Filter",
   "Vehicles by Driver",
@@ -56,10 +52,10 @@ const REPORT_TYPES: ReportType[] = [
   "Violations by Type",
   "Violations by Location",
 ];
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ----- REPORT DESC PER FILTER ----------------------------------------------------------------------------------------------------------------------------------------------------
-// descriptions per report
+// Reports that do NOT need a filter modal
+const NO_FILTER_REPORTS: ReportType[] = ["Expired or Suspended Licenses"];
+
 const REPORT_DESCRIPTIONS: Record<ReportType, string> = {
   "Drivers by Filter":
     "Filter and view drivers by license type, status, age range, and sex",
@@ -74,7 +70,6 @@ const REPORT_DESCRIPTIONS: Record<ReportType, string> = {
     "View all traffic violations filtered by violation type",
   "Violations by Location": "View all traffic violations filtered by location",
 };
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------
 
 const defaultDriversFilter: DriverFilter = {
   license_number: undefined,
@@ -95,46 +90,40 @@ const defaultViolationFilter: ViolationFilter = {
   location: undefined,
 };
 
-// ----- MAIN PAGE ----------------------------------------------------------------------------------------------------------------------------------------------------
+// ----- MAIN PAGE -----
 const ReportsPage = () => {
   const [reportType, setReportType] = useState<ReportType>("Drivers by Filter");
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
 
-  const [driverFilter, setDriverFilter] = useState<DriverFilter>({
-    license_number: undefined,
-    license_type: undefined,
-    license_status: undefined,
-    min_age: undefined,
-    max_age: undefined,
-    sex: undefined,
-  });
+  const [driverFilter, setDriverFilter] =
+    useState<DriverFilter>(defaultDriversFilter);
   const [registrationFilter, setRegistrationFilter] =
-    useState<RegistrationFilter>({
-      max_date: undefined,
-    });
-  const [violationFilter, setViolationFilter] = useState<ViolationFilter>({
-    license_number: undefined,
-    year: 0,
-    location: undefined,
-  });
+    useState<RegistrationFilter>(defaultRegistrationFilter);
+  const [violationFilter, setViolationFilter] = useState<ViolationFilter>(
+    defaultViolationFilter,
+  );
 
   const handleSelectReport = (r: ReportType) => {
     setReportType(r);
     setRows([]);
     setHasGenerated(false);
+    // Reset all filters
+    setDriverFilter(defaultDriversFilter);
+    setRegistrationFilter(defaultRegistrationFilter);
+    setViolationFilter(defaultViolationFilter);
   };
 
-  // CHANGE THIS ------------------------------------------------------
+  const needsFilter = !NO_FILTER_REPORTS.includes(reportType);
+
+  // ----- GENERATE -----
   const handleGenerate = async () => {
     let data = [];
 
     switch (reportType) {
-      // DRIVERS BY FILTER
-      // ----------------------------------------------------------------------------------------------------
       case "Drivers by Filter": {
         const params = new URLSearchParams();
-        setDriverFilter(defaultDriversFilter);
         if (driverFilter.license_type) {
           params.append("license_type", driverFilter.license_type);
         }
@@ -160,7 +149,6 @@ const ReportsPage = () => {
 
       case "Vehicles by Driver": {
         const params = new URLSearchParams();
-        setDriverFilter(defaultDriversFilter);
         if (driverFilter.license_number) {
           params.append("license_number", driverFilter.license_number);
         }
@@ -174,7 +162,6 @@ const ReportsPage = () => {
 
       case "Expired Vehicle Registrations": {
         const params = new URLSearchParams();
-        setRegistrationFilter(defaultRegistrationFilter);
         if (registrationFilter.max_date) {
           params.append("max_date", registrationFilter.max_date as string);
         }
@@ -197,30 +184,21 @@ const ReportsPage = () => {
         break;
       }
 
-      // VIOLATIONS BY DRIVER
-      // // ----------------------------------------------------------------------------------------------------
       case "Violations by Driver": {
         const params = new URLSearchParams();
-        setViolationFilter(defaultViolationFilter);
         if (violationFilter.license_number) {
           params.append("license_number", violationFilter.license_number);
         }
-
         const response = await api(`violations/filter/driver?${params}`);
         if (response.ok) {
           const filterRes = await response.json();
-          console.log(filterRes);
           data = filterRes.data;
         }
         break;
       }
-      // // ----------------------------------------------------------------------------------------------------
 
-      // VIOLATIONS BY TYPE
-      // ----------------------------------------------------------------------------------------------------
       case "Violations by Type": {
         if (!violationFilter.year) break;
-
         const response = await api(`violations/count/${violationFilter.year}`);
         if (response.ok) {
           const filterRes = await response.json();
@@ -229,10 +207,6 @@ const ReportsPage = () => {
         break;
       }
 
-      // ----------------------------------------------------------------------------------------------------
-
-      // VIOLATIONS BY LOC
-      // ----------------------------------------------------------------------------------------------------
       case "Violations by Location": {
         const params = new URLSearchParams();
         if (violationFilter.location) {
@@ -245,20 +219,85 @@ const ReportsPage = () => {
         }
         break;
       }
-      // ----------------------------------------------------------------------------------------------------
     }
     setRows(data);
     setHasGenerated(true);
-    if (data.length === 0)
-      toast.info("No results match the filter."); // when there is no result
-    else toast.success("Report generated successfully"); // when there are results
+    if (data.length === 0) toast.info("No results match the filter.");
+    else toast.success("Report generated successfully");
   };
 
-  // handles the csv export button
-  const handleExportCSV = () => {};
+  const handleExportCSV = () => {
+    if (rows.length === 0) {
+      toast.info("No data to export. Generate a report first.");
+      return;
+    }
 
-  // switch functions to det which ui controls to show in the screen
-  const renderFilterPanel = () => {
+    const { columns: cols } = getTableConfig();
+
+    // Build headers and accessor keys from column definitions
+    const headers: string[] = [];
+    const accessors: ((row: Record<string, any>) => string)[] = [];
+
+    for (const col of cols) {
+      // Skip action columns
+      if ((col as any).id === "actions") continue;
+
+      const header =
+        typeof (col as any).header === "string"
+          ? (col as any).header
+          : ((col as any).accessorKey ?? (col as any).id ?? "");
+      headers.push(String(header));
+
+      const key = (col as any).accessorKey;
+      if (key) {
+        accessors.push((row) => {
+          const val = row[key];
+          if (val === null || val === undefined) return "";
+          if (val instanceof Date) return val.toLocaleDateString();
+          return String(val);
+        });
+      } else {
+        accessors.push(() => "");
+      }
+    }
+
+    // Escape a CSV cell value
+    const escapeCSV = (val: string): string => {
+      if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    const csvLines: string[] = [];
+    csvLines.push(headers.map(escapeCSV).join(","));
+
+    for (const row of rows) {
+      const cells = accessors.map((fn) => escapeCSV(fn(row)));
+      csvLines.push(cells.join(","));
+    }
+
+    const csvContent = csvLines.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const slug = reportType.toLowerCase().replace(/\s+/g, "_");
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `${slug}_${timestamp}.csv`;
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("CSV exported successfully.");
+  };
+
+  // ----- FILTER MODAL CONTENT -----
+  const renderFilterModalContent = () => {
     switch (reportType) {
       case "Drivers by Filter":
         return (
@@ -278,8 +317,6 @@ const ReportsPage = () => {
             onChange={setRegistrationFilter}
           />
         );
-      case "Expired or Suspended Licenses":
-        return null;
       case "Violations by Driver":
         return (
           <ViolationsByDriverPanel
@@ -301,16 +338,38 @@ const ReportsPage = () => {
             onChange={setViolationFilter}
           />
         );
+      default:
+        return null;
     }
   };
 
+  // ----- FILTER MODAL TITLE -----
+  const getFilterModalTitle = (): string => {
+    switch (reportType) {
+      case "Drivers by Filter":
+        return "Filter Drivers";
+      case "Vehicles by Driver":
+        return "Filter by Driver";
+      case "Expired Vehicle Registrations":
+        return "Filter Expired Registrations";
+      case "Violations by Driver":
+        return "Filter Violations by Driver";
+      case "Violations by Type":
+        return "Filter Violations by Type";
+      case "Violations by Location":
+        return "Filter Violations by Location";
+      default:
+        return "Filter Parameters";
+    }
+  };
+
+  // ----- TABLE CONFIG -----
   const getTableConfig = () => {
     if (reportType === "Vehicles by Driver") {
       return {
         columns: getVehicleColumns(undefined as any, undefined as any).filter(
           (c) => c.id !== "actions",
         ),
-        title: "Vehicles",
       };
     }
     if (reportType === "Expired Vehicle Registrations") {
@@ -319,13 +378,11 @@ const ReportsPage = () => {
           undefined as any,
           undefined as any,
         ).filter((c) => c.id !== "actions"),
-        title: "Vehicle Registrations",
       };
     }
     if (reportType === "Violations by Type") {
       return {
         columns: getViolationTypeCountColumns(),
-        title: "Violations by Type",
       };
     }
     if (
@@ -336,115 +393,157 @@ const ReportsPage = () => {
         columns: getViolationColumns(undefined as any, undefined as any).filter(
           (c) => c.id !== "actions",
         ),
-        title: "Traffic Violations",
       };
     }
     return {
       columns: getDriverColumns() as any,
-      title: "Drivers",
     };
   };
 
-  const { columns, title } = getTableConfig();
+  const { columns } = getTableConfig();
 
+  // ----- RENDER -----
   return (
     <div className="w-full p-6 flex flex-col gap-6">
-      {/* top panels */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-6">
-        {/* select report */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <p className="text-[15px] font-semibold text-slate-800 m-0">
-            Select Report
-          </p>
-          <p className="text-[13px] text-slate-500 mt-0.5 mb-0">
-            Choose a report type to generate
-          </p>
-
-          <div className="mt-4">
-            <FieldSet className="gap-y-1.5">
-              <FieldLabel>Report Type</FieldLabel>
-              <Field>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full flex items-center justify-between border border-slate-200 rounded-md bg-slate-50 px-3 py-2 text-[13px] text-slate-800 cursor-pointer font-normal h-9 hover:bg-slate-100"
-                    >
-                      <span>{reportType}</span>
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-80 overflow-y-auto">
-                    {REPORT_TYPES.map((r) => (
-                      <DropdownMenuItem
-                        key={r}
-                        onClick={() => handleSelectReport(r)}
-                        className={`cursor-pointer justify-between text-[13px] ${
-                          r === reportType
-                            ? "text-indigo-600 font-semibold bg-indigo-50/50"
-                            : "text-slate-700"
-                        }`}
-                      >
-                        <span>{r}</span>
-                        {r === reportType && (
-                          <Check className="w-3.5 h-3.5 text-indigo-600" />
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </Field>
-            </FieldSet>
-
-            <p className="text-[13px] text-slate-500 mt-3 italic">
-              {REPORT_DESCRIPTIONS[reportType]}
-            </p>
-          </div>
+      {/* Toolbar row: Dropdown title on the left, filter + action buttons on the right */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="flex items-center gap-4 w-full sm:w-auto flex-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 px-1 py-0 h-auto text-2xl font-bold tracking-tight text-slate-900 hover:bg-transparent hover:text-slate-700 cursor-pointer"
+              >
+                <span>{reportType}</span>
+                <ChevronDown className="w-5 h-5 text-slate-400" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-72 max-h-80 overflow-y-auto"
+              align="start"
+            >
+              {REPORT_TYPES.map((r) => (
+                <DropdownMenuItem
+                  key={r}
+                  onClick={() => handleSelectReport(r)}
+                  className={`cursor-pointer justify-between text-[13px] ${
+                    r === reportType
+                      ? "text-indigo-600 font-semibold bg-indigo-50/50"
+                      : "text-slate-700"
+                  }`}
+                >
+                  <span>{r}</span>
+                  {r === reportType && (
+                    <Check className="w-3.5 h-3.5 text-indigo-600" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* filter parameters */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-          <p className="text-[15px] font-semibold text-slate-800 m-0">
-            Filter Parameters
-          </p>
-          <p className="text-[13px] text-slate-500 mt-0.5 mb-0">
-            Specify filter criteria for the report
-          </p>
-          <div className="mt-4">{renderFilterPanel()}</div>
+        <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+          {needsFilter && (
+            <Button
+              variant="outline"
+              className="gap-2 rounded-lg bg-white text-slate-700 transition-all"
+              onClick={() => setFilterModalOpen(true)}
+            >
+              <Filter className="h-4 w-4" />
+              Filter
+            </Button>
+          )}
+          <Button
+            onClick={handleGenerate}
+            className="cursor-pointer gap-2 rounded-lg"
+          >
+            <FileText size={15} />
+            Generate
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+            className="cursor-pointer gap-2 rounded-lg"
+          >
+            <Download size={15} />
+            Export CSV
+          </Button>
         </div>
       </div>
 
-      {/* action buttons */}
-      <div className="flex items-center gap-3">
-        <Button onClick={handleGenerate} className="cursor-pointer gap-2">
-          <FileText size={15} />
-          Generate Report
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleExportCSV}
-          className="cursor-pointer gap-2"
-        >
-          <Download size={15} />
-          Export to CSV
-        </Button>
-      </div>
+      {/* Description */}
+      <p className="text-sm text-slate-500 -mt-3 italic">
+        {REPORT_DESCRIPTIONS[reportType]}
+      </p>
 
-      {/* results table */}
-      {rows.length > 0 && (
-        <DataTable columns={columns} data={rows} title={title} />
-      )}
+      {/* Results table */}
+      {rows.length > 0 && <DataTable columns={columns} data={rows} />}
 
-      {/* empty state */}
+      {/* Empty state */}
       {!hasGenerated && (
         <div className="bg-white border border-dashed border-slate-200 rounded-xl py-16 text-center">
           <FileText size={40} className="mx-auto text-slate-300" />
           <p className="text-[13px] text-slate-400 mt-3">
             Select a report type and click{" "}
-            <strong className="text-slate-600">Generate Report</strong> to view
+            <strong className="text-slate-600">Generate</strong> to view
             results.
           </p>
         </div>
+      )}
+
+      {/* Empty results state */}
+      {hasGenerated && rows.length === 0 && (
+        <div className="bg-white border border-dashed border-slate-200 rounded-xl py-16 text-center">
+          <FileText size={40} className="mx-auto text-slate-300" />
+          <p className="text-[13px] text-slate-400 mt-3">
+            No results found matching the current filter.
+          </p>
+        </div>
+      )}
+
+      {/* Filter Modal */}
+      {needsFilter && (
+        <BaseModal
+          isOpen={filterModalOpen}
+          onClose={() => setFilterModalOpen(false)}
+          title={getFilterModalTitle()}
+          description={REPORT_DESCRIPTIONS[reportType]}
+        >
+          {renderFilterModalContent()}
+          <div className="mt-6 flex justify-end gap-2">
+            <Button
+              className="rounded-lg"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                // Reset the appropriate filter
+                switch (reportType) {
+                  case "Drivers by Filter":
+                  case "Vehicles by Driver":
+                    setDriverFilter(defaultDriversFilter);
+                    break;
+                  case "Expired Vehicle Registrations":
+                    setRegistrationFilter(defaultRegistrationFilter);
+                    break;
+                  default:
+                    setViolationFilter(defaultViolationFilter);
+                    break;
+                }
+              }}
+            >
+              Reset
+            </Button>
+            <Button
+              className="rounded-lg"
+              onClick={() => {
+                setFilterModalOpen(false);
+                handleGenerate();
+              }}
+            >
+              Apply & Generate
+            </Button>
+          </div>
+        </BaseModal>
       )}
     </div>
   );

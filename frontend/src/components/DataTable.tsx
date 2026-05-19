@@ -24,6 +24,7 @@ interface DataTableProps<TData> {
   title?: string;
   onFilterClick?: () => void;
   onAddNewClick?: () => void;
+  isFiltered?: boolean;
 }
 
 export function DataTable<TData>({
@@ -32,6 +33,7 @@ export function DataTable<TData>({
   title,
   onFilterClick,
   onAddNewClick,
+  isFiltered,
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
@@ -55,11 +57,15 @@ export function DataTable<TData>({
             {onFilterClick && (
               <Button
                 variant="outline"
-                className="bg-white gap-2 text-slate-700 rounded-lg"
+                className={`gap-2 rounded-lg transition-all ${
+                  isFiltered
+                    ? "bg-blue-50 border-blue-300 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                    : "bg-white text-slate-700"
+                }`}
                 onClick={onFilterClick}
               >
                 <Filter className="h-4 w-4" />
-                Filter
+                {isFiltered ? "Filtered" : "Filter"}
               </Button>
             )}
             {onAddNewClick && (

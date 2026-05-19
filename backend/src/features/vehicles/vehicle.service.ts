@@ -6,9 +6,32 @@ import { DriverFilter } from "@shared";
 export const getAllVehicles = async () => {
   const connection = await pool.getConnection();
   try {
-    const [result] = (await connection.query(
-      "SELECT * FROM vehicles",
+    const [vehicles] = (await connection.query(
+      `SELECT v.*, d.full_name AS owner_name 
+       FROM vehicles v
+       LEFT JOIN drivers d ON v.license_number = d.license_number`,
     )) as any as [Vehicle[], any];
+
+    const [registrations] = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM vehicle_registrations",
+    );
+
+    const [violations] = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM traffic_violations",
+    );
+
+    const result = vehicles.map((vehicle) => {
+      return {
+        ...vehicle,
+        registrations: registrations.filter(
+          (r) => r.plate_number === vehicle.plate_number,
+        ),
+        violations: violations.filter(
+          (v) => v.plate_number === vehicle.plate_number,
+        ),
+      };
+    });
+
     return result;
   } catch (error) {
     throw error;
@@ -20,11 +43,35 @@ export const getAllVehicles = async () => {
 export const getVehicle = async (plate_number: string) => {
   const connection = await pool.getConnection();
   try {
-    const [result] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM vehicles WHERE plate_number = ?",
+    const [vehicles] = await connection.query<RowDataPacket[]>(
+      `SELECT v.*, d.full_name AS owner_name 
+       FROM vehicles v
+       LEFT JOIN drivers d ON v.license_number = d.license_number
+       WHERE v.plate_number = ?`,
       [plate_number],
     );
-    return result[0] as Vehicle;
+
+    if (vehicles.length === 0) {
+      return null;
+    }
+
+    const vehicle = vehicles[0] as Vehicle;
+
+    const [registrations] = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM vehicle_registrations WHERE plate_number = ?",
+      [plate_number],
+    );
+
+    const [violations] = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM traffic_violations WHERE plate_number = ?",
+      [plate_number],
+    );
+
+    return {
+      ...vehicle,
+      registrations,
+      violations,
+    } as any as Vehicle;
   } catch (error) {
     throw error;
   } finally {
@@ -78,9 +125,10 @@ export const createVehicle = async (vehicle: Vehicle) => {
 
 export const updateVehicle = async (vehicle: Vehicle) => {
   const connection = await pool.getConnection();
+  await connection.beginTransaction();
   try {
     const [driver] = await connection.query<RowDataPacket[]>(
-      "SELECT * FROM drivers WHERE license_number = ?",
+      "SELECT 1 FROM drivers WHERE license_number = ?",
       [vehicle.license_number],
     );
     if (driver.length === 0) {
@@ -91,27 +139,23 @@ export const updateVehicle = async (vehicle: Vehicle) => {
       throw err;
     }
 
-    // Check if the driver is actually being changed
     const [existingVehicle] = await connection.query<RowDataPacket[]>(
       "SELECT license_number FROM vehicles WHERE plate_number = ?",
-      [vehicle.plate_number]
+      [vehicle.plate_number],
     );
 
-    if (existingVehicle && existingVehicle.length > 0 && existingVehicle[0]) {
-      const oldDriverLicense = existingVehicle[0].license_number;
-      if (oldDriverLicense !== vehicle.license_number) {
-        // Driver is being changed! Check for outstanding unpaid violations on the vehicle
-        const [unpaidViolations] = await connection.query<RowDataPacket[]>(
-          "SELECT COUNT(*) as count FROM traffic_violations WHERE plate_number = ? AND violation_status = 'Unpaid'",
-          [vehicle.plate_number]
+    if (existingVehicle[0]?.license_number !== vehicle.license_number) {
+      const [unpaidViolations] = await connection.query<RowDataPacket[]>(
+        "SELECT COUNT(*) as count FROM traffic_violations WHERE plate_number = ? AND violation_status = 'Unpaid'",
+        [vehicle.plate_number],
+      );
+      const unpaidCount = (unpaidViolations[0] as any)?.count ?? 0;
+      if (unpaidCount > 0) {
+        const err = new Error(
+          `Cannot change the vehicle's driver. The vehicle with plate number '${vehicle.plate_number}' has ${unpaidCount} outstanding unpaid traffic violation(s). All violations must be settled before changing the assigned driver.`,
         );
-        if (unpaidViolations && unpaidViolations[0] && (unpaidViolations[0] as any).count > 0) {
-          const err = new Error(
-            `Cannot change the vehicle's driver. The vehicle with plate number '${vehicle.plate_number}' has ${(unpaidViolations[0] as any).count} outstanding unpaid traffic violation(s). All violations must be settled before changing the assigned driver.`
-          );
-          (err as any).code = "ER_DUP_ENTRY";
-          throw err;
-        }
+        (err as any).code = "ER_UNPAID_VIOLATIONS"; // fixed: was ER_DUP_ENTRY
+        throw err;
       }
     }
 
@@ -131,6 +175,7 @@ export const updateVehicle = async (vehicle: Vehicle) => {
     );
 
     if (result.affectedRows === 0) {
+      await connection.rollback();
       return null;
     }
 
@@ -138,8 +183,11 @@ export const updateVehicle = async (vehicle: Vehicle) => {
       "SELECT * FROM vehicles WHERE plate_number = ?",
       [vehicle.plate_number],
     );
+
+    await connection.commit();
     return rows[0] as Vehicle;
   } catch (error) {
+    await connection.rollback();
     throw error;
   } finally {
     connection.release();
@@ -151,7 +199,7 @@ export const deleteVehicle = async (plate_number: string) => {
 
   try {
     await connection.query(
-      "UPDATE vehicle_registrations SET registration_status = 'Expired' WHERE registration_status = 'Active' AND expiration_date <= CURDATE()"
+      "UPDATE vehicle_registrations SET registration_status = 'Expired' WHERE registration_status = 'Active' AND expiration_date <= CURDATE()",
     );
 
     const [activeRegistrations] = await connection.query<RowDataPacket[]>(
@@ -180,7 +228,7 @@ export const deleteVehicle = async (plate_number: string) => {
 
     await connection.query(
       "DELETE FROM traffic_violations WHERE plate_number = ? AND violation_status = 'Paid'",
-      [plate_number]
+      [plate_number],
     );
 
     const [result] = await connection.query<ResultSetHeader>(
@@ -249,10 +297,38 @@ export const filterVehicleByDriver = async (driverFilter: DriverFilter) => {
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   try {
-    const [result] = await connection.query(
+    const [vehicles] = (await connection.query(
       `SELECT v.*, d.full_name AS owner_name FROM vehicles v INNER JOIN drivers d ON v.license_number = d.license_number ${whereClause}`,
       params,
+    )) as any as [Vehicle[], any];
+
+    if (vehicles.length === 0) {
+      return [];
+    }
+
+    const plateNumbers = vehicles.map((v) => v.plate_number);
+
+    const [registrations] = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM vehicle_registrations WHERE plate_number IN (?)",
+      [plateNumbers],
     );
+
+    const [violations] = await connection.query<RowDataPacket[]>(
+      "SELECT * FROM traffic_violations WHERE plate_number IN (?)",
+      [plateNumbers],
+    );
+
+    const result = vehicles.map((vehicle) => {
+      return {
+        ...vehicle,
+        registrations: registrations.filter(
+          (r) => r.plate_number === vehicle.plate_number,
+        ),
+        violations: violations.filter(
+          (v) => v.plate_number === vehicle.plate_number,
+        ),
+      };
+    });
 
     return result as Vehicle[];
   } catch (error) {

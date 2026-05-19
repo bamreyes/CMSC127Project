@@ -8,14 +8,15 @@ export const getAllDrivers = async (req: Request, res: Response) => {
   try {
     const result = await DriverService.getAllDrivers();
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
 // GET /api/drivers/:license_number
 export const getDriver = async (req: Request, res: Response) => {
-  const { license_number } = req.params;
+  let license_number = req.params.license_number as string;
+  if (license_number) license_number = license_number.toUpperCase().trim();
 
   if (!license_number) {
     return res
@@ -31,7 +32,7 @@ export const getDriver = async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await DriverService.getDriver(license_number as string);
+    const result = await DriverService.getDriver(license_number);
     if (!result) {
       return res
         .status(404)
@@ -39,8 +40,8 @@ export const getDriver = async (req: Request, res: Response) => {
     }
 
     res.status(201).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -121,13 +122,13 @@ export const createDriver = async (req: Request, res: Response) => {
       });
     }
 
-    res.status(500).send({ success: false, message: "An error occured" });
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
-// PUT /api/drivers/:license_number
 export const updateDriver = async (req: Request, res: Response) => {
-  const { license_number } = req.params;
+  let license_number = req.params.license_number as string;
+  if (license_number) license_number = license_number.toUpperCase().trim();
 
   if (!license_number) {
     return res
@@ -220,13 +221,14 @@ export const updateDriver = async (req: Request, res: Response) => {
     ) {
       return res.status(409).send({ success: false, message: error.message });
     }
-    res.status(500).send({ success: false, message: "An error occured" });
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
 // DELETE /api/drivers/:license_number
 export const deleteDriver = async (req: Request, res: Response) => {
-  const { license_number } = req.params;
+  let license_number = req.params.license_number as string;
+  if (license_number) license_number = license_number.toUpperCase().trim();
 
   if (!license_number) {
     return res
@@ -242,7 +244,7 @@ export const deleteDriver = async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await DriverService.deleteDriver(license_number as string);
+    const result = await DriverService.deleteDriver(license_number);
     if (!result) {
       return res
         .status(404)
@@ -258,7 +260,7 @@ export const deleteDriver = async (req: Request, res: Response) => {
     if (error.code === "ER_ROW_IS_REFERENCED") {
       return res.status(409).send({ success: false, message: error.message });
     }
-    res.status(500).send({ success: false, message: "An error occured" });
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -346,7 +348,7 @@ export const filterDrivers = async (req: Request, res: Response) => {
       message: `Found ${result.length} driver(s)`,
       data: result,
     });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res.status(500).send({ success: false, message: error.message || "An error occurred." });
   }
 };

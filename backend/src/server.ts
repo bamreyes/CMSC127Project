@@ -19,6 +19,24 @@ app.use(
 );
 app.use(express.json());
 
+app.use((req, res, next) => {
+  if (req.body) {
+    for (const key in req.body) {
+      if (typeof req.body[key] === "string" && ["license_number", "plate_number", "engine_number", "chassis_number"].includes(key)) {
+        req.body[key] = req.body[key].toUpperCase().trim();
+      }
+    }
+  }
+  if (req.query) {
+    for (const key in req.query) {
+      if (typeof req.query[key] === "string" && ["license_number", "plate_number", "engine_number", "chassis_number"].includes(key)) {
+        req.query[key] = req.query[key].toUpperCase().trim();
+      }
+    }
+  }
+  next();
+});
+
 app.get("/", (req, res) => {
   res.send("CMSC 127 RUNNING");
 });
@@ -35,9 +53,17 @@ app.listen(PORT, async () => {
   try {
     await pool.query("SELECT 1");
     console.log("Database connected");
-    const populate = process.env.POPULATE_DB === "true";
-    await initializeDatabase(populate);
+    
+    // Check if the drivers table exists before initializing
+    const [tables] = await pool.query<any[]>("SHOW TABLES LIKE 'drivers'");
+    if (tables.length === 0) {
+      console.log("Drivers table not found. Initializing database...");
+      const populate = process.env.POPULATE_DB === "true";
+      await initializeDatabase(populate);
+    } else {
+      console.log("Database already initialized. Skipping drop and recreation of tables.");
+    }
   } catch (err) {
-    console.error("Database initialization failed:", err);
+    console.error("Database connection/initialization failed:", err);
   }
 });

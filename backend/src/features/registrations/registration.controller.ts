@@ -13,18 +13,18 @@ function formatDate(dateString: string): string {
 export const getAllRegistrations = async (req: Request, res: Response) => {
   try {
     const result = await RegistrationService.getAllRegistrations();
-if (!result || result.length === 0) {
-      return res
-        .status(404)
-        .send({
-          success: false,
-          message: "Vehicle registration(s) not found.",
-        });
+    if (!result || result.length === 0) {
+      return res.status(404).send({
+        success: false,
+        message: "Vehicle registration(s) not found.",
+      });
     }
 
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred." });
+  } catch (error: any) {
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -41,7 +41,7 @@ export const getRegistrationID = async (req: Request, res: Response) => {
 
   try {
     const result = await RegistrationService.getRegistrationID(regNum);
-if (!result) {
+    if (!result) {
       return res.status(404).send({
         success: false,
         message: "Vehicle registration not found.",
@@ -49,14 +49,17 @@ if (!result) {
     }
 
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred." });
+  } catch (error: any) {
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
 // GET /api/registrations/:plate_number
 export const getRegistrationPlateNo = async (req: Request, res: Response) => {
-  const { plate_number } = req.params;
+  let plate_number = req.params.plate_number as string;
+  if (plate_number) plate_number = plate_number.toUpperCase().trim();
 
   if (typeof plate_number !== "string") {
     return res
@@ -67,18 +70,18 @@ export const getRegistrationPlateNo = async (req: Request, res: Response) => {
   try {
     const result =
       await RegistrationService.getRegistrationPlateNo(plate_number);
-if (!result || result.length === 0) {
-      return res
-        .status(404)
-        .send({
-          success: false,
-          message: "Vehicle registration(s) not found.",
-        });
+    if (!result || result.length === 0) {
+      return res.status(404).send({
+        success: false,
+        message: "Vehicle registration(s) not found.",
+      });
     }
 
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred." });
+  } catch (error: any) {
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -86,19 +89,21 @@ if (!result || result.length === 0) {
 export const getExpiredRegistrations = async (req: Request, res: Response) => {
   const { max_date } = req.query;
   try {
-    const result = await RegistrationService.getExpiredRegistrations(max_date as string);
-if (!result || result.length === 0) {
-      return res
-        .status(404)
-        .send({
-          success: false,
-          message: "Vehicle registration(s) not found.",
-        });
+    const result = await RegistrationService.getExpiredRegistrations(
+      max_date as string,
+    );
+    if (!result || result.length === 0) {
+      return res.status(404).send({
+        success: false,
+        message: "Vehicle registration(s) not found.",
+      });
     }
 
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred." });
+  } catch (error: any) {
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -110,6 +115,7 @@ export const createRegistration = async (req: Request, res: Response) => {
     registration_date,
     expiration_date,
     plate_number,
+    license_number,
   } = req.body;
 
   const requiredFields = [
@@ -129,36 +135,30 @@ export const createRegistration = async (req: Request, res: Response) => {
   }
 
   if (isNaN(Number(registration_number))) {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        message: "Registration number must be a number.",
-      });
+    return res.status(400).send({
+      success: false,
+      message: "Registration number must be a number.",
+    });
   }
 
   if (
     isNaN(new Date(registration_date).getTime()) ||
     isNaN(new Date(expiration_date).getTime())
   ) {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        message: "Date(s) must be in a valid format (YYYY-MM-DD).",
-      });
+    return res.status(400).send({
+      success: false,
+      message: "Date(s) must be in a valid format (YYYY-MM-DD).",
+    });
   }
 
   const newRegDate = formatDate(registration_date);
   const newExpDate = formatDate(expiration_date);
 
   if (new Date(newExpDate) <= new Date(newRegDate)) {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        error: "Expiration date cannot be on or before registration date.",
-      });
+    return res.status(400).send({
+      success: false,
+      error: "Expiration date cannot be on or before registration date.",
+    });
   }
 
   try {
@@ -168,22 +168,22 @@ export const createRegistration = async (req: Request, res: Response) => {
       registration_date: new Date(newRegDate),
       expiration_date: new Date(newExpDate),
       plate_number,
+      license_number,
     } as VehicleRegistration);
-res
-      .status(201)
-      .send({
-        success: true,
-        message: "Vehicle registration created successfully.",
-        data: result,
-      });
+    res.status(201).send({
+      success: true,
+      message: "Vehicle registration created successfully.",
+      data: result,
+    });
   } catch (error: any) {
     if (error.code === "ER_DUP_ENTRY") {
-      const isPrimaryKeyDup = error.message && error.message.includes("PRIMARY");
+      const isPrimaryKeyDup =
+        error.message && error.message.includes("PRIMARY");
       return res.status(409).send({
         success: false,
         message: isPrimaryKeyDup
           ? "A vehicle registration with this registration number already exists."
-          : (error.message || "A duplicate entry error occurred."),
+          : error.message || "A duplicate entry error occurred.",
       });
     }
 
@@ -194,7 +194,9 @@ res
       });
     }
 
-    res.status(500).send({ success: false, message: "An error occurred." });
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -214,6 +216,7 @@ export const updateRegistration = async (req: Request, res: Response) => {
     registration_date,
     expiration_date,
     plate_number,
+    license_number,
   } = req.body;
 
   const requiredFields = [
@@ -235,12 +238,10 @@ export const updateRegistration = async (req: Request, res: Response) => {
     isNaN(new Date(registration_date).getTime()) ||
     isNaN(new Date(expiration_date).getTime())
   ) {
-    return res
-      .status(400)
-      .send({
-        success: false,
-        message: "Date(s) must be in a valid format (YYYY-MM-DD).",
-      });
+    return res.status(400).send({
+      success: false,
+      message: "Date(s) must be in a valid format (YYYY-MM-DD).",
+    });
   }
 
   if (new Date(expiration_date) <= new Date(registration_date)) {
@@ -259,29 +260,29 @@ export const updateRegistration = async (req: Request, res: Response) => {
       registration_date: new Date(newRegDate),
       expiration_date: new Date(newExpDate),
       plate_number,
+      license_number,
       registration_number: regNum,
     } as VehicleRegistration);
-if (!result) {
+    if (!result) {
       return res
         .status(404)
         .send({ success: false, message: "Vehicle registration not found." });
     }
 
-    res
-      .status(200)
-      .send({
-        success: true,
-        message: "Vehicle registration updated successfully.",
-        data: result,
-      });
+    res.status(200).send({
+      success: true,
+      message: "Vehicle registration updated successfully.",
+      data: result,
+    });
   } catch (error: any) {
     if (error.code === "ER_DUP_ENTRY") {
-      const isPrimaryKeyDup = error.message && error.message.includes("PRIMARY");
+      const isPrimaryKeyDup =
+        error.message && error.message.includes("PRIMARY");
       return res.status(409).send({
         success: false,
         message: isPrimaryKeyDup
           ? "A vehicle registration with this registration number already exists."
-          : (error.message || "A duplicate entry error occurred."),
+          : error.message || "A duplicate entry error occurred.",
       });
     }
 
@@ -291,7 +292,9 @@ if (!result) {
         message: error.message || "The referenced plate number does not exist.",
       });
     }
-    res.status(500).send({ success: false, message: "An error occurred." });
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -308,7 +311,7 @@ export const deleteRegistration = async (req: Request, res: Response) => {
 
   try {
     const result = await RegistrationService.deleteRegistration(regNum);
-if (result === null) {
+    if (result === null) {
       return res.status(404).send({
         success: false,
         message: "Vehicle registration not found.",
@@ -316,7 +319,9 @@ if (result === null) {
     }
 
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occurred." });
+  } catch (error: any) {
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };

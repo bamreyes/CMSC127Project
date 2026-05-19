@@ -13,387 +13,491 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import type { Driver } from "@shared";
+import {
+  driverSchema,
+  vehicleSchema,
+  registrationSchema,
+  violationSchema,
+} from "@/lib/validation";
 
-export function EditDriverModal({ isOpen, onClose, onSuccess, driver }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
-    driver: Driver;
+const toDate = (val: string | Date | undefined) =>
+  val ? new Date(val) : undefined;
+
+const toDateString = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const r = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${r}`;
+};
+
+export function EditDriverModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  driver,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  driver: Driver;
 }) {
-    const toDate = (val: string | Date | undefined) =>
-        val ? new Date(val) : undefined;
+  const mapSexToCode = (s: string): "M" | "F" => {
+    if (s === "Male") return "M";
+    if (s === "Female") return "F";
+    return s as "M" | "F";
+  };
 
-    const mapSexToCode = (s: string): "M" | "F" => {
-        if (s === "Male") return "M";
-        if (s === "Female") return "F";
-        return s as "M" | "F";
-    };
+  const [formData, setFormData] = useState<DriverFormData>({
+    license_number: driver.license_number,
+    full_name: driver.full_name,
+    date_of_birth: toDate(driver.date_of_birth),
+    sex: mapSexToCode(driver.sex),
+    address: driver.address,
+    license_type: driver.license_type,
+    license_status: driver.license_status,
+    issued_at: toDate(driver.issued_at),
+    expires_at: toDate(driver.expires_at),
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-    const [formData, setFormData] = useState<DriverFormData>({
-        license_number: driver.license_number,
-        full_name: driver.full_name,
-        date_of_birth: toDate(driver.date_of_birth),
-        sex: mapSexToCode(driver.sex),
-        address: driver.address,
-        license_type: driver.license_type,
-        license_status: driver.license_status,
-        issued_at: toDate(driver.issued_at),
-        expires_at: toDate(driver.expires_at),
+  // Re-sync if a different row's edit is opened or modal is dismissed.
+  useEffect(() => {
+    setFormData({
+      license_number: driver.license_number,
+      full_name: driver.full_name,
+      date_of_birth: toDate(driver.date_of_birth),
+      sex: mapSexToCode(driver.sex),
+      address: driver.address,
+      license_type: driver.license_type,
+      license_status: driver.license_status,
+      issued_at: toDate(driver.issued_at),
+      expires_at: toDate(driver.expires_at),
     });
+    setErrors({});
+  }, [driver, isOpen]);
 
-    // Re-sync if a different row's edit is opened.
-    useEffect(() => {
-        setFormData({
-            license_number: driver.license_number,
-            full_name: driver.full_name,
-            date_of_birth: toDate(driver.date_of_birth),
-            sex: mapSexToCode(driver.sex),
-            address: driver.address,
-            license_type: driver.license_type,
-            license_status: driver.license_status,
-            issued_at: toDate(driver.issued_at),
-            expires_at: toDate(driver.expires_at),
-        });
-    }, [driver]);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        if (!formData.date_of_birth || !formData.issued_at || !formData.expires_at) {
-            toast.error("Please fill in all required date fields.");
-            return;
+    const result = driverSchema.safeParse(formData);
+    if (!result.success) {
+      const formattedErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path.join(".");
+        if (path) {
+          formattedErrors[path] = issue.message;
         }
+      });
+      setErrors(formattedErrors);
+      toast.error("Please correct the validation errors.");
+      return;
+    }
 
-        const toDateString = (d: Date) => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, "0");
-            const r = String(d.getDate()).padStart(2, "0");
-            return `${y}-${m}-${r}`;
-        };
+    setErrors({});
+    setSubmitting(true);
+    try {
+      const data = result.data;
+      const response = await api(`/drivers/${driver.license_number}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          license_number: data.license_number,
+          full_name: data.full_name,
+          date_of_birth: toDateString(data.date_of_birth),
+          sex:
+            data.sex === "M" ? "Male" : data.sex === "F" ? "Female" : data.sex,
+          address: data.address,
+          license_type: data.license_type,
+          license_status: data.license_status,
+          issued_at: toDateString(data.issued_at),
+          expires_at: toDateString(data.expires_at),
+        }),
+      });
 
-        setSubmitting(true);
-        try {
-            const response = await api(`/drivers/${driver.license_number}`, {
-                method: "PUT",
-                body: JSON.stringify({
-                    license_number: formData.license_number,
-                    full_name: formData.full_name,
-                    date_of_birth: toDateString(formData.date_of_birth),
-                    sex: formData.sex === "M" ? "Male" : formData.sex === "F" ? "Female" : formData.sex,
-                    address: formData.address,
-                    license_type: formData.license_type,
-                    license_status: formData.license_status,
-                    issued_at: toDateString(formData.issued_at),
-                    expires_at: toDateString(formData.expires_at),
-                }),
-            });
+      const resultJson = await response.json();
 
-            const result = await response.json();
+      if (!response.ok) {
+        throw new Error(resultJson.message || "Failed to update driver.");
+      }
 
-            if (!response.ok) {
-                throw new Error(result.message || "Failed to update driver.");
-            }
+      toast.success("Driver updated successfully.");
+      onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error("Failed to update driver.", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-            toast.success("Driver updated successfully.");
-            onSuccess();
-            onClose();
-        } catch (error) {
-            toast.error("Failed to update driver.", {
-                description: error instanceof Error ? error.message : "An unexpected error occurred.",
-            });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <BaseModal
-            isOpen = {isOpen}
-            onClose = {onClose}
-            title = "Edit a Driver"
-            description = "Edit the details of a driver (* required)."
-        >
-            <form onSubmit = {handleSubmit}>
-                <DriverForm
-                    mode = "edit"
-                    formData = {formData}
-                    onChange = {setFormData}
-                />
-                <div className = "mt-6 flex justify-end">
-                    <Button className = "rounded-lg" type = "submit" disabled = {submitting}>
-                        {submitting ? "Updating..." : "Update"}
-                    </Button>
-                </div>
-            </form>
-        </BaseModal>
-    );
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Edit a Driver"
+      description="Edit the details of a driver (* required)."
+    >
+      <form onSubmit={handleSubmit}>
+        <DriverForm
+          mode="edit"
+          formData={formData}
+          onChange={setFormData}
+          errors={errors}
+        />
+        <div className="mt-6 flex justify-end">
+          <Button className="rounded-lg" type="submit" disabled={submitting}>
+            {submitting ? "Updating..." : "Update"}
+          </Button>
+        </div>
+      </form>
+    </BaseModal>
+  );
 }
 
-export function EditVehicleModal({ isOpen, onClose, onSuccess, vehicle }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
-    vehicle: Vehicle;
+export function EditVehicleModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  vehicle,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  vehicle: Vehicle;
 }) {
-    const [formData, setFormData] = useState<VehicleFormData>({
-        plate_number: vehicle.plate_number,
-        license_number: vehicle.license_number,
-        engine_number: vehicle.engine_number,
-        chassis_number: vehicle.chassis_number,
-        make: vehicle.make,
-        model: vehicle.model,
-        year: vehicle.year,
-        vehicle_type: vehicle.vehicle_type,
-        color: vehicle.color,
+  const [formData, setFormData] = useState<VehicleFormData>({
+    plate_number: vehicle.plate_number,
+    license_number: vehicle.license_number,
+    engine_number: vehicle.engine_number,
+    chassis_number: vehicle.chassis_number,
+    make: vehicle.make,
+    model: vehicle.model,
+    year: vehicle.year,
+    vehicle_type: vehicle.vehicle_type,
+    color: vehicle.color,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      plate_number: vehicle.plate_number,
+      license_number: vehicle.license_number,
+      engine_number: vehicle.engine_number,
+      chassis_number: vehicle.chassis_number,
+      make: vehicle.make,
+      model: vehicle.model,
+      year: vehicle.year,
+      vehicle_type: vehicle.vehicle_type,
+      color: vehicle.color,
     });
-    const [submitting, setSubmitting] = useState(false);
+    setErrors({});
+  }, [vehicle, isOpen]);
 
-    useEffect(() => {
-        setFormData({
-            plate_number: vehicle.plate_number,
-            license_number: vehicle.license_number,
-            engine_number: vehicle.engine_number,
-            chassis_number: vehicle.chassis_number,
-            make: vehicle.make,
-            model: vehicle.model,
-            year: vehicle.year,
-            vehicle_type: vehicle.vehicle_type,
-            color: vehicle.color,
-        });
-    }, [vehicle]);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        if (formData.year === "") {
-            toast.error("Please enter the vehicle year.");
-            return;
+    const result = vehicleSchema.safeParse(formData);
+    if (!result.success) {
+      const formattedErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path.join(".");
+        if (path) {
+          formattedErrors[path] = issue.message;
         }
+      });
+      setErrors(formattedErrors);
+      toast.error("Please correct the validation errors.");
+      return;
+    }
 
-        setSubmitting(true);
-        try {
-            const response = await api(`/vehicles/${vehicle.plate_number}`, {
-                method: "PUT",
-                body: JSON.stringify({
-                    engine_number: formData.engine_number,
-                    chassis_number: formData.chassis_number,
-                    make: formData.make,
-                    model: formData.model,
-                    year: formData.year,
-                    vehicle_type: formData.vehicle_type,
-                    color: formData.color,
-                    license_number: formData.license_number,
-                }),
-            });
+    setErrors({});
+    setSubmitting(true);
+    try {
+      const data = result.data;
+      const response = await api(`/vehicles/${vehicle.plate_number}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          engine_number: data.engine_number,
+          chassis_number: data.chassis_number,
+          make: data.make,
+          model: data.model,
+          year: data.year,
+          vehicle_type: data.vehicle_type,
+          color: data.color,
+          license_number: data.license_number,
+        }),
+      });
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || "Failed to update vehicle.");
+      const resultJson = await response.json();
+      if (!response.ok)
+        throw new Error(resultJson.message || "Failed to update vehicle.");
 
-            toast.success("Vehicle updated successfully.");
-            onSuccess();
-            onClose();
-        } catch (error) {
-            toast.error("Failed to update vehicle.", {
-                description: error instanceof Error ? error.message : "An unexpected error occurred.",
-            });
-        } finally {
-            setSubmitting(false);
-        }
-    };
+      toast.success("Vehicle updated successfully.");
+      onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error("Failed to update vehicle.", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    return (
-        <BaseModal isOpen = {isOpen} onClose = {onClose} title = "Edit a Vehicle" description = "Edit the details of a vehicle (* required).">
-            <form onSubmit = {handleSubmit}>
-                <VehicleForm mode = "edit" formData = {formData} onChange = {setFormData} />
-                <div className = "mt-6 flex justify-end">
-                    <Button className = "rounded-lg" type = "submit" disabled = {submitting}>
-                        {submitting ? "Updating..." : "Update"}
-                    </Button>
-                </div>
-            </form>
-        </BaseModal>
-    );
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Edit a Vehicle"
+      description="Edit the details of a vehicle (* required)."
+    >
+      <form onSubmit={handleSubmit}>
+        <VehicleForm
+          mode="edit"
+          formData={formData}
+          onChange={setFormData}
+          errors={errors}
+        />
+        <div className="mt-6 flex justify-end">
+          <Button className="rounded-lg" type="submit" disabled={submitting}>
+            {submitting ? "Updating..." : "Update"}
+          </Button>
+        </div>
+      </form>
+    </BaseModal>
+  );
 }
 
-export function EditRegistrationModal({ isOpen, onClose, onSuccess, registration }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
-    registration: VehicleRegistration;
+export function EditRegistrationModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  registration,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  registration: VehicleRegistration;
 }) {
-    const toDate = (val: string | Date | undefined) => val ? new Date(val) : undefined;
+  const [formData, setFormData] = useState<RegistrationFormData>({
+    registration_number: registration.registration_number,
+    plate_number: registration.plate_number,
+    registration_status: registration.registration_status,
+    registration_date: toDate(registration.registration_date),
+    expiration_date: toDate(registration.expiration_date),
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-    const [formData, setFormData] = useState<RegistrationFormData>({
-        registration_number: registration.registration_number,
-        plate_number: registration.plate_number,
-        registration_status: registration.registration_status,
-        registration_date: toDate(registration.registration_date),
-        expiration_date: toDate(registration.expiration_date),
+  useEffect(() => {
+    setFormData({
+      registration_number: registration.registration_number,
+      plate_number: registration.plate_number,
+      registration_status: registration.registration_status,
+      registration_date: toDate(registration.registration_date),
+      expiration_date: toDate(registration.expiration_date),
     });
-    const [submitting, setSubmitting] = useState(false);
+    setErrors({});
+  }, [registration, isOpen]);
 
-    useEffect(() => {
-        setFormData({
-            registration_number: registration.registration_number,
-            plate_number: registration.plate_number,
-            registration_status: registration.registration_status,
-            registration_date: toDate(registration.registration_date),
-            expiration_date: toDate(registration.expiration_date),
-        });
-    }, [registration]);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        if (!formData.registration_date || !formData.expiration_date) {
-            toast.error("Please fill in all required date fields.");
-            return;
+    const result = registrationSchema.safeParse(formData);
+    if (!result.success) {
+      const formattedErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path.join(".");
+        if (path) {
+          formattedErrors[path] = issue.message;
         }
+      });
+      setErrors(formattedErrors);
+      toast.error("Please correct the validation errors.");
+      return;
+    }
 
-        const toDateString = (d: Date) => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, "0");
-            const r = String(d.getDate()).padStart(2, "0");
-            return `${y}-${m}-${r}`;
-        };
+    setErrors({});
+    setSubmitting(true);
+    try {
+      const data = result.data;
+      const response = await api(
+        `/registrations/${registration.registration_number}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            plate_number: data.plate_number,
+            registration_status: data.registration_status,
+            registration_date: toDateString(data.registration_date),
+            expiration_date: toDateString(data.expiration_date),
+          }),
+        },
+      );
 
-        setSubmitting(true);
-        try {
-            const response = await api(`/registrations/${registration.registration_number}`, {
-                method: "PUT",
-                body: JSON.stringify({
-                    plate_number: formData.plate_number,
-                    registration_status: formData.registration_status,
-                    registration_date: toDateString(formData.registration_date),
-                    expiration_date: toDateString(formData.expiration_date),
-                }),
-            });
+      const resultJson = await response.json();
+      if (!response.ok)
+        throw new Error(resultJson.message || "Failed to update registration.");
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || "Failed to update registration.");
+      toast.success("Registration updated successfully.");
+      onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error("Failed to update registration.", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-            toast.success("Registration updated successfully.");
-            onSuccess();
-            onClose();
-        } catch (error) {
-            toast.error("Failed to update registration.", {
-                description: error instanceof Error ? error.message : "An unexpected error occurred.",
-            });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <BaseModal isOpen = {isOpen} onClose = {onClose} title = "Edit a Registration" description = "Edit the details of a registration (* required).">
-            <form onSubmit = {handleSubmit}>
-                <RegistrationForm mode = "edit" formData = {formData} onChange = {setFormData} />
-                <div className = "mt-6 flex justify-end">
-                    <Button className = "rounded-lg" type = "submit" disabled = {submitting}>
-                        {submitting ? "Updating..." : "Update"}
-                    </Button>
-                </div>
-            </form>
-        </BaseModal>
-    );
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Edit a Registration"
+      description="Edit the details of a registration (* required)."
+    >
+      <form onSubmit={handleSubmit}>
+        <RegistrationForm
+          mode="edit"
+          formData={formData}
+          onChange={setFormData}
+          errors={errors}
+        />
+        <div className="mt-6 flex justify-end">
+          <Button className="rounded-lg" type="submit" disabled={submitting}>
+            {submitting ? "Updating..." : "Update"}
+          </Button>
+        </div>
+      </form>
+    </BaseModal>
+  );
 }
 
-export function EditViolationModal({ isOpen, onClose, onSuccess, violation }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
-    violation: TrafficViolation;
+export function EditViolationModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  violation,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  violation: TrafficViolation;
 }) {
-    const toDate = (val: string | Date | undefined) => val ? new Date(val) : undefined;
+  const [formData, setFormData] = useState<ViolationFormData>({
+    date: toDate(violation.date),
+    license_number: violation.license_number,
+    plate_number: violation.plate_number,
+    location: violation.location,
+    violation_type: violation.violation_type,
+    fine_amount: violation.fine_amount,
+    apprehending_officer: violation.apprehending_officer || "",
+    violation_status: violation.violation_status,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-    const [formData, setFormData] = useState<ViolationFormData>({
-        date: toDate(violation.date),
-        license_number: violation.license_number,
-        plate_number: violation.plate_number,
-        location: violation.location,
-        violation_type: violation.violation_type,
-        fine_amount: violation.fine_amount,
-        apprehending_officer: violation.apprehending_officer,
-        violation_status: violation.violation_status,
+  useEffect(() => {
+    setFormData({
+      date: toDate(violation.date),
+      license_number: violation.license_number,
+      plate_number: violation.plate_number,
+      location: violation.location,
+      violation_type: violation.violation_type,
+      fine_amount: violation.fine_amount,
+      apprehending_officer: violation.apprehending_officer || "",
+      violation_status: violation.violation_status,
     });
-    const [submitting, setSubmitting] = useState(false);
+    setErrors({});
+  }, [violation, isOpen]);
 
-    useEffect(() => {
-        setFormData({
-            date: toDate(violation.date),
-            license_number: violation.license_number,
-            plate_number: violation.plate_number,
-            location: violation.location,
-            violation_type: violation.violation_type,
-            fine_amount: violation.fine_amount,
-            apprehending_officer: violation.apprehending_officer,
-            violation_status: violation.violation_status,
-        });
-    }, [violation]);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        if (!formData.date) {
-            toast.error("Please select a violation date.");
-            return;
+    const result = violationSchema.safeParse(formData);
+    if (!result.success) {
+      const formattedErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path.join(".");
+        if (path) {
+          formattedErrors[path] = issue.message;
         }
+      });
+      setErrors(formattedErrors);
+      toast.error("Please correct the validation errors.");
+      return;
+    }
 
-        if (formData.fine_amount === "") {
-            toast.error("Please enter the fine amount.");
-            return;
-        }
+    setErrors({});
+    setSubmitting(true);
+    try {
+      const data = result.data;
+      const response = await api(`/violations/${violation.violation_id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          date: toDateString(data.date),
+          license_number: data.license_number,
+          plate_number: data.plate_number,
+          location: data.location,
+          violation_type: data.violation_type,
+          fine_amount: data.fine_amount,
+          apprehending_officer: data.apprehending_officer || "",
+          violation_status: data.violation_status,
+        }),
+      });
 
-        const toDateString = (d: Date) => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, "0");
-            const r = String(d.getDate()).padStart(2, "0");
-            return `${y}-${m}-${r}`;
-        };
+      const resultJson = await response.json();
+      if (!response.ok)
+        throw new Error(resultJson.message || "Failed to update violation.");
 
-        setSubmitting(true);
-        try {
-            const response = await api(`/violations/${violation.violation_id}`, {
-                method: "PUT",
-                body: JSON.stringify({
-                    date: toDateString(formData.date),
-                    license_number: formData.license_number,
-                    plate_number: formData.plate_number,
-                    location: formData.location,
-                    violation_type: formData.violation_type,
-                    fine_amount: formData.fine_amount,
-                    apprehending_officer: formData.apprehending_officer,
-                    violation_status: formData.violation_status,
-                }),
-            });
+      toast.success("Violation updated successfully.");
+      onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error("Failed to update violation.", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || "Failed to update violation.");
-
-            toast.success("Violation updated successfully.");
-            onSuccess();
-            onClose();
-        } catch (error) {
-            toast.error("Failed to update violation.", {
-                description: error instanceof Error ? error.message : "An unexpected error occurred.",
-            });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <BaseModal isOpen = {isOpen} onClose = {onClose} title = "Edit a Violation" description = "Edit the details of a violation (* required).">
-            <form onSubmit = {handleSubmit}>
-                <ViolationForm mode = "edit" formData = {formData} onChange = {setFormData} />
-                <div className = "mt-6 flex justify-end">
-                    <Button className = "rounded-lg" type = "submit" disabled = {submitting}>
-                        {submitting ? "Updating..." : "Update"}
-                    </Button>
-                </div>
-            </form>
-        </BaseModal>
-    );
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Edit a Violation"
+      description="Edit the details of a violation (* required)."
+    >
+      <form onSubmit={handleSubmit}>
+        <ViolationForm
+          mode="edit"
+          formData={formData}
+          onChange={setFormData}
+          errors={errors}
+        />
+        <div className="mt-6 flex justify-end">
+          <Button className="rounded-lg" type="submit" disabled={submitting}>
+            {submitting ? "Updating..." : "Update"}
+          </Button>
+        </div>
+      </form>
+    </BaseModal>
+  );
 }

@@ -8,14 +8,17 @@ export const getAllVehicles = async (req: Request, res: Response) => {
   try {
     const result = await VehicleService.getAllVehicles();
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
 // GET vehicle
 export const getVehicle = async (req: Request, res: Response) => {
-  const { plate_number } = req.params;
+  let plate_number = req.params.plate_number as string;
+  if (plate_number) plate_number = plate_number.toUpperCase().trim();
 
   if (!plate_number) {
     return res
@@ -31,7 +34,7 @@ export const getVehicle = async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await VehicleService.getVehicle(plate_number as string);
+    const result = await VehicleService.getVehicle(plate_number);
     if (!result) {
       return res
         .status(404)
@@ -39,8 +42,10 @@ export const getVehicle = async (req: Request, res: Response) => {
     }
 
     res.status(200).send({ success: true, data: result });
-  } catch (error) {
-    res.status(500).send({ success: false, message: "An error occured" });
+  } catch (error: any) {
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -112,18 +117,20 @@ export const createVehicle = async (req: Request, res: Response) => {
       });
     }
 
-    res.status(500).send({ success: false, message: "An error occurred" });
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred" });
   }
 };
 
-// PUT update
 export const updateVehicle = async (req: Request, res: Response) => {
-  const { plate_number } = req.params;
+  let plate_number = req.params.plate_number as string;
+  if (plate_number) plate_number = plate_number.toUpperCase().trim();
 
   if (!plate_number) {
     return res
       .status(400)
-      .send({ status: false, message: "Plate number is required" });
+      .send({ success: false, message: "Plate number is required" });
   }
 
   if (typeof plate_number !== "string" || plate_number.trim() === "") {
@@ -187,6 +194,14 @@ export const updateVehicle = async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error: any) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).send({
+        success: false,
+        message:
+          error.message ||
+          "A vehicle with this plate number, engine number, or chassis number already exists.",
+      });
+    }
     if (error.code === "ER_NO_REFERENCED_ROW_2") {
       return res.status(409).send({
         success: false,
@@ -196,13 +211,13 @@ export const updateVehicle = async (req: Request, res: Response) => {
     }
     res.status(500).send({
       success: false,
-      message: "An error occurred",
+      message: error.message || "An error occurred",
     });
   }
 };
-
 export const deleteVehicle = async (req: Request, res: Response) => {
-  const { plate_number } = req.params;
+  let plate_number = req.params.plate_number as string;
+  if (plate_number) plate_number = plate_number.toUpperCase().trim();
 
   if (!plate_number) {
     return res
@@ -218,7 +233,7 @@ export const deleteVehicle = async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await VehicleService.deleteVehicle(plate_number as string);
+    const result = await VehicleService.deleteVehicle(plate_number);
     if (!result) {
       return res
         .status(404)
@@ -234,7 +249,9 @@ export const deleteVehicle = async (req: Request, res: Response) => {
     if (error.code === "ER_ROW_IS_REFERENCED") {
       return res.status(409).send({ success: false, message: error.message });
     }
-    res.status(500).send({ success: false, message: "An error occured" });
+    res
+      .status(500)
+      .send({ success: false, message: error.message || "An error occurred." });
   }
 };
 
@@ -328,9 +345,13 @@ export const filterByDriver = async (req: Request, res: Response) => {
       message: `Found ${result.length} vehicle(s)`,
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
     res
       .status(500)
-      .send({ success: false, message: "An error occurred", error });
+      .send({
+        success: false,
+        message: error.message || "An error occurred",
+        error,
+      });
   }
 };

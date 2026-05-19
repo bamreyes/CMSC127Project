@@ -7,7 +7,7 @@ export interface VehicleRegistration {
   registration_date: string | Date;
   expiration_date: string | Date;
   plate_number: string; // References to vehicle
-  owner_name?: string; // Fetched via JOIN
+  owner_name?: string;
   license_number?: string; // Fetched via JOIN
 }
 
